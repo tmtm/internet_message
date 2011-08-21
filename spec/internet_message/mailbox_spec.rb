@@ -1,6 +1,64 @@
 require __FILE__.sub(/\/spec\//, '/lib/').sub(/_spec\.rb\z/,'')
 
 describe InternetMessage::Mailbox do
+  describe '.parse' do
+    subject{InternetMessage::Mailbox.parse(src)}
+
+    shared_examples_for 'hoge.fuga@example.com' do
+      its(:local_part){should == 'hoge.fuga'}
+      its(:domain){should == 'example.com'}
+    end
+
+    context "for 'hoge.fuga@example.com'" do
+      let(:src){'hoge.fuga@example.com'}
+      it_should_behave_like 'hoge.fuga@example.com'
+    end
+
+    context "for 'hoge.fuga@example.com (comment)'" do
+      let(:src){'hoge.fuga@example.com (comment)'}
+      it_should_behave_like 'hoge.fuga@example.com'
+    end
+
+    context "for 'hoge(a).fuga(b)@(c)example.com(d)'" do
+      let(:src){'hoge(a).fuga(b)@(c)example.com(d)'}
+      it_should_behave_like 'hoge.fuga@example.com'
+    end
+
+    context "for '\"hoge.fuga\"@example.com'" do
+      let(:src){'"hoge.fuga"@example.com'}
+      it_should_behave_like 'hoge.fuga@example.com'
+    end
+
+    context "for ' hoge . fuga @  example .  com '" do
+      let(:src){' hoge . fuga @  example .  com '}
+      it_should_behave_like 'hoge.fuga@example.com'
+    end
+
+    context "for 'hoge..fuga.@example..com'" do
+      let(:src){'hoge..fuga.@example..com'}
+      its(:local_part){should == 'hoge..fuga.'}
+      its(:domain){should == 'example..com'}
+    end
+
+    context "for '@example.com'" do
+      let(:src){'@example.com'}
+      its(:local_part){should == ''}
+      its(:domain){should == 'example.com'}
+    end
+
+    context "for 'hoge.fuga@'" do
+      let(:src){'hoge.fuga@'}
+      its(:local_part){should == 'hoge.fuga'}
+      its(:domain){should == ''}
+    end
+
+    context "for 'display <hoge.fuga@example.com>'" do
+      let(:src){'display <hoge.fuga@example.com>'}
+      it_should_behave_like 'hoge.fuga@example.com'
+      its(:display_name){should == 'display'}
+    end
+  end
+
   describe '#to_s' do
     let(:local_part){'hoge'}
     let(:domain){'example.com'}

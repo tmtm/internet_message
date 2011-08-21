@@ -1,7 +1,24 @@
-require "#{File.dirname __FILE__}/parser"
+require "#{File.dirname __FILE__}/tokenizer"
 
 class InternetMessage
   class Mailbox
+    def self.parse(src)
+      tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
+      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      if i = tokens.index(Token.new(:CHAR, '<'))
+        display_name = tokens[0..i-1].map(&:value).join(' ')
+        if j = tokens.index(Token.new(:CHAR, '>'))
+          tokens = tokens[i+1..j-1]
+        else
+          tokens = tokens[i+1..-1]
+        end
+      end
+      i = tokens.rindex(Token.new(:CHAR, '@'))
+      local = i == 0 ? '' : tokens[0..i-1].map(&:value).join
+      domain = tokens[i+1..-1].map(&:value).join
+      Mailbox.new(local, domain, display_name)
+    end
+
     attr_reader :local_part, :domain, :display_name
 
     def initialize(local_part, domain, display_name=nil)

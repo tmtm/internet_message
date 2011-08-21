@@ -23,46 +23,6 @@ describe InternetMessage::Parser do
 
   end
 
-  describe '.parse_mailbox' do
-    subject{InternetMessage::Parser.parse_mailbox(src)}
-
-    shared_examples_for 'hoge.fuga@example.com' do
-      its(:local_part){should == 'hoge.fuga'}
-      its(:domain){should == 'example.com'}
-    end
-
-    context 'with simple address' do
-      let(:src){'hoge.fuga@example.com'}
-      it_should_behave_like 'hoge.fuga@example.com'
-    end
-
-    context 'with comment' do
-      let(:src){'hoge.fuga@example.com (comment)'}
-      it_should_behave_like 'hoge.fuga@example.com'
-    end
-
-    context 'with comment 2' do
-      let(:src){'hoge(a).fuga(b)@(c)example.com(d)'}
-      it_should_behave_like 'hoge.fuga@example.com'
-    end
-
-    context 'with quoted local-part' do
-      let(:src){'"hoge.fuga"@example.com'}
-      it_should_behave_like 'hoge.fuga@example.com'
-    end
-
-    context 'with address including space' do
-      let(:src){' hoge . fuga @  example .  com '}
-      it_should_behave_like 'hoge.fuga@example.com'
-    end
-
-    context 'with invalid address' do
-      let(:src){'hoge..fuga.@example..com'}
-      its(:local_part){should == 'hoge..fuga.'}
-      its(:domain){should == 'example..com'}
-    end
-  end
-
   describe '.parse_address_list' do
     it 'return Array of Mailbox/Group' do
       ret = InternetMessage::Parser.parse_address_list('hoge@example.com (comment), "fuga,fuga" <fuga@example.jp>, group: foo@example.net, bar@example.org;')
