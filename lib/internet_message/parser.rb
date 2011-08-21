@@ -1,71 +1,75 @@
-require 'strscan'
+require "#{File.dirname __FILE__}/tokenizer"
+require "#{File.dirname __FILE__}/mailbox"
+require "#{File.dirname __FILE__}/group"
 
 class InternetMessage
-  class Parser
-    def initialize(s)
-      @ss = s.is_a?(StringScanner) ? s : StringScanner.new(s)
-    end
-
-    def parse_dot_atom
-      parse_sub do
-        skip_cfws
-        ret = @ss.scan(/[0-9a-zA-Z\!\#\$\%\^\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+(\.[0-9a-zA-Z\!\#\$\%\^\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+)*/) or raise
-        skip_cfws
-        ret
-      end
-    end
-
-    def parse_dot_atom2
-      parse_sub do
-        skip_cfws
-        ret = @ss.scan(/[0-9a-zA-Z\!\#\$\%\^\'\*\+\-\/\=\?\^\_\`\{\|\}\~\.]+/) or raise
-        skip_cfws
-        ret
-      end
-    end
-
-    def parse_quoted_string
-      parse_sub do
-        skip_cfws
-        str = @ss.scan(/\"(\\.|[^\"])+\"/) or raise
-        skip_cfws
-        str.gsub(/\A\"|\"\z/,'').gsub(/\\(.)/){$1}
-      end
-    end
-
-    def parse_sub
-      pos = @ss.pos
-      begin
-        yield
-      rescue RuntimeError
-        at = @ss.rest[0, 20]
-        @ss.pos = pos
-        raise "parse error at: `#{at}'"
-      end
-    end
-
-    def skip_cfws
-      until @ss.eos?
-        if @ss.check(/\(/)
-          parse_comment
-          next
+  module Parser
+    module_function
+    def parse_mailbox(src)
+      tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
+      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      if i = tokens.index(Token.new(:CHAR, '<'))
+        display_name = tokens[0..i-1].map(&:value).join(' ')
+        if j = tokens.index(Token.new(:CHAR, '>'))
+          tokens = tokens[i+1..j-1]
+        else
+          tokens = tokens[i+1..-1]
         end
-        # CR LF are not included because they are trimmed previous process.
-        @ss.scan(/[ \t]+/) or break
+      end
+      i = tokens.rindex(Token.new(:CHAR, '@'))
+      local = tokens[0..i-1].map(&:value).join
+      domain = tokens[i+1..-1].map(&:value).join
+      Mailbox.new(local, domain, display_name)
+    end
+
+    def parse_mailbox_list(src)
+      tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
+      ret = []
+      m = []
+      while t = tokens.shift
+        if t.type == :CHAR and t.value == ','
+          ret.push parse_mailbox(m) unless m.empty?
+          m = []
+        else
+          m.push t
+        end
+      end
+      ret.push parse_mailbox(m) unless m.empty?
+      ret
+    end
+
+    def parse_address(src)
+      tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
+      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      i = tokens.index(Token.new(:CHAR, ':'))
+      j = tokens.index(Token.new(:CHAR, ';'))
+      if i and i > 0 and j and i < j
+        display_name = tokens[0..i-1].map(&:value).join(' ')
+        mailbox_list = parse_mailbox_list(tokens[i+1..j-1])
+        Group.new(display_name, mailbox_list)
+      else
+        parse_mailbox(tokens)
       end
     end
 
-    def parse_comment
-      parse_sub do
-        ret = []
-        @ss.scan(/\(/) or raise
-        until @ss.scan(/\)/)
-          s = @ss.scan(/(\\.|[ \t\x21-\x27\x2a-\x5b\x5d-\x7e])+/) and ret.push s.gsub(/\\(.)/){$1}
-          @ss.check(/\(/) and ret.push parse_comment
-          raise if @ss.eos?
+    def parse_address_list(src)
+      tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
+      ret = []
+      m = []
+      while t = tokens.shift
+        if t.type == :CHAR and t.value == ':' and i = tokens.index(Token.new(:CHAR, ';'))
+          m.push t
+          m.concat tokens.slice!(0..i)
+        elsif t.type == :CHAR and t.value == ','
+          ret.push parse_address(m) unless m.empty?
+          m = []
+        else
+          m.push t
         end
-        ret
       end
+      ret.push parse_address(m) unless m.empty?
+      ret
     end
+
   end
 end
