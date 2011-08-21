@@ -50,5 +50,9 @@ class InternetMessage
     def quote_string(s)
       '"'+s.gsub(/[\\\"]/){"\\#{$&}"}+'"'
     end
+
+    def ==(other)
+      other.is_a?(Mailbox) && other.local_part == self.local_part && other.domain == self.domain && other.display_name == self.display_name
+    end
   end
 end
