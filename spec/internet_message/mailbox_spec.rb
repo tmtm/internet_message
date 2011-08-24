@@ -19,6 +19,11 @@ describe InternetMessage::Mailbox do
       it_should_behave_like 'hoge.fuga@example.com'
     end
 
+    context "for '<hoge.fuga@example.com> (comment)'" do
+      let(:src){'<hoge.fuga@example.com> (comment)'}
+      it_should_behave_like 'hoge.fuga@example.com'
+    end
+
     context "for 'hoge(a).fuga(b)@(c)example.com(d)'" do
       let(:src){'hoge(a).fuga(b)@(c)example.com(d)'}
       it_should_behave_like 'hoge.fuga@example.com'
@@ -56,6 +61,37 @@ describe InternetMessage::Mailbox do
       let(:src){'display <hoge.fuga@example.com>'}
       it_should_behave_like 'hoge.fuga@example.com'
       its(:display_name){should == 'display'}
+    end
+  end
+
+  describe '.parse_list' do
+    subject{InternetMessage::Mailbox.parse_list(src)}
+
+    context "for 'hoge.fuga@example.com, foo.bar@example.net'" do
+      let(:src){'hoge.fuga@example.com, foo.bar@example.net'}
+      it {should == [
+          InternetMessage::Mailbox.new('hoge.fuga', 'example.com'),
+          InternetMessage::Mailbox.new('foo.bar', 'example.net'),
+        ]
+      }
+    end
+
+    context "for '\"hoge,fuga\" <hoge.fuga@example.com>, \"foo,bar\" <foo.bar@example.net>'" do
+      let(:src){'"hoge,fuga" <hoge.fuga@example.com>, "foo,bar" <foo.bar@example.net>'}
+      it {should == [
+          InternetMessage::Mailbox.new('hoge.fuga', 'example.com', 'hoge,fuga'),
+          InternetMessage::Mailbox.new('foo.bar', 'example.net', 'foo,bar'),
+        ]
+      }
+    end
+
+    context "for ',hoge.fuga@example.com,,, foo.bar@example.net,'" do
+      let(:src){',hoge.fuga@example.com,,, foo.bar@example.net,'}
+      it {should == [
+          InternetMessage::Mailbox.new('hoge.fuga', 'example.com'),
+          InternetMessage::Mailbox.new('foo.bar', 'example.net'),
+        ]
+      }
     end
   end
 

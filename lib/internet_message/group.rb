@@ -1,5 +1,4 @@
 require "#{File.dirname __FILE__}/tokenizer"
-require "#{File.dirname __FILE__}/parser"
 
 class InternetMessage
   class Group
@@ -10,10 +9,10 @@ class InternetMessage
       j = tokens.index(Token.new(:CHAR, ';')) || tokens.size
       if i and i < j
         display_name = i == 0 ? '' : tokens[0..i-1].map(&:value).join(' ')
-        mailbox_list = Parser.parse_mailbox_list(tokens[i+1..j-1])
+        mailbox_list = Mailbox.parse_list(tokens[i+1..j-1])
         Group.new(display_name, mailbox_list)
       else
-        Group.new('', Parser.parse_mailbox_list(tokens))
+        Group.new('', Mailbox.parse_list(tokens))
       end
     end
 

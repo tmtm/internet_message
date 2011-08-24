@@ -13,7 +13,7 @@ Content-Type: Text/Plain; charset=UTF-8
 body test
 EOS
     it '#from returns InternetMessage::Mailbox' do
-      subject.from.should be_kind_of InternetMessage::Mailbox
+      subject.from.should == InternetMessage::Mailbox.new('tommy', 'tmtm.org', 'TOMITA Masahiro')
     end
     it '#to returns Array of InternetMessage::Mailbox' do
       subject.to.should be_kind_of Array
@@ -29,15 +29,19 @@ EOS
       subject.subject.should == 'test'
     end
     it '#type returns String' do
+      pending
       subject.type.should == 'text'
     end
     it '#subtype returns String' do
+      pending
       subject.subtype.should == 'plain'
     end
     it '#charset returns String' do
+      pending
       subject.charset.should == 'utf-8'
     end
     it '#body returns String' do
+      pending
       subject.body.should == "body test\n"
       subject.body.encoding.should == Encoding::UTF_8
     end

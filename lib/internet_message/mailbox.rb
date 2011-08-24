@@ -19,6 +19,21 @@ class InternetMessage
       Mailbox.new(local, domain, display_name)
     end
 
+    def self.parse_list(src)
+      tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
+      ret = []
+      until tokens.empty?
+        i = tokens.index(Token.new(:CHAR, ','))
+        break unless i
+        if i > 0
+          ret.push self.parse(tokens.slice!(0, i))
+        end
+        tokens.shift
+      end
+      ret.push self.parse(tokens) unless tokens.empty?
+      ret
+    end
+
     attr_reader :local_part, :domain, :display_name
 
     def initialize(local_part, domain, display_name=nil)
