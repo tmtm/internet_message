@@ -2,8 +2,9 @@ require 'mmapscanner'
 
 class InternetMessage
   dir = File.dirname __FILE__
-  require "#{dir}/internet_message/mailbox"
   require "#{dir}/internet_message/header_field"
+  require "#{dir}/internet_message/mailbox"
+  require "#{dir}/internet_message/content_type"
 
   def initialize(src)
     @src = MmapScanner.new(src)
@@ -32,21 +33,31 @@ class InternetMessage
   def subject
     parse_header
     f = @header['subject'].first
-    f && f.value.to_s
+    f && f.value.to_s.gsub(/\r?\n/, '')
+  end
+
+  def content_type
+    parse_header
+    f = @header['content-type'].first
+    f && ContentType.parse(f.value.to_s.gsub(/\r?\n/, ''))
   end
 
   def type
+    content_type ? content_type.type : 'text'
   end
 
   def subtype
+    content_type ? content_type.subtype : 'plain'
   end
 
   def charset
+    (content_type && content_type.attribute['charset']) || 'us-ascii'
   end
 
   def body
     parse_header
-    @rawbody.to_s
+    s = @rawbody.to_s
+    s.force_encoding(charset) rescue s
   end
 
   private

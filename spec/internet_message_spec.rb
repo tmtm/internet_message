@@ -28,20 +28,19 @@ EOS
     it '#subject returns String' do
       subject.subject.should == 'test'
     end
+    it '#content_type returns ContentType' do
+      subject.content_type.should == InternetMessage::ContentType.new('text', 'plain', 'charset'=>'UTF-8')
+    end
     it '#type returns String' do
-      pending
       subject.type.should == 'text'
     end
     it '#subtype returns String' do
-      pending
       subject.subtype.should == 'plain'
     end
     it '#charset returns String' do
-      pending
-      subject.charset.should == 'utf-8'
+      subject.charset.should == 'UTF-8'
     end
     it '#body returns String' do
-      pending
       subject.body.should == "body test\n"
       subject.body.encoding.should == Encoding::UTF_8
     end
