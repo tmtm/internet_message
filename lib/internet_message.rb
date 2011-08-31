@@ -9,6 +9,9 @@ class InternetMessage
   def initialize(src)
     @src = MmapScanner.new(src)
     @header = Hash.new{|h,k| h[k] = []}
+    @parse_multipart = false
+    @preamble = @epilogue = nil
+    @parts = []
   end
 
   def from
@@ -60,6 +63,21 @@ class InternetMessage
     s.force_encoding(charset) rescue s
   end
 
+  def preamble
+    parse_multipart
+    @preamble
+  end
+
+  def epilogue
+    parse_multipart
+    @epilogue
+  end
+
+  def parts
+    parse_multipart
+    @parts
+  end
+
   private
 
   def split_header_body
@@ -103,6 +121,23 @@ class InternetMessage
       end
     end
     ret
+  end
+
+  def parse_multipart
+    return if @parse_multipart
+    boundary = content_type.attribute['boundary']
+    b_re = Regexp.escape boundary
+    @rawbody.skip(/(.*?)^--#{b_re}(\r?\n|\z)/nm) or return
+    @preamble = @rawbody.matched(1).to_s.chomp
+    @parts = []
+    last = false
+    until last
+      @rawbody.skip(/(.*?)\r?\n--#{b_re}(--)?(\r?\n|\z)/nm) or break
+      @parts.push InternetMessage.new(@rawbody.matched(1))
+      last = true if @rawbody.matched(2)
+    end
+    @epilogue = @rawbody.rest.to_s
+    @parse_multipart = true
   end
 
 end

@@ -45,4 +45,35 @@ EOS
       subject.body.encoding.should == Encoding::UTF_8
     end
   end
+
+  context 'with multipart message' do
+    let(:src){<<EOS}
+Content-Type: Multipart/Mixed; Boundary="abcdefgABCDEFG"
+
+this is preamble.
+--abcdefgABCDEFG
+Content-Type: text/plain
+
+body1
+--abcdefgABCDEFG
+Content-Type: text/plain
+
+body2
+
+--abcdefgABCDEFG--
+this is epilogue.
+EOS
+    it '#preamble returns preamble as String' do
+      subject.preamble.should == 'this is preamble.'
+    end
+    it '#epilogue returns epilogue as String' do
+      subject.epilogue.should == "this is epilogue.\n"
+    end
+    it '#parts returns Array of InternetMessage' do
+      subject.parts.size.should == 2
+      subject.parts[0].body.should == 'body1'
+      subject.parts[1].body.should == "body2\n"
+    end
+  end
+
 end
