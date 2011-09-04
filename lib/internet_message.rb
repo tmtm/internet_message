@@ -1,3 +1,4 @@
+require 'date'
 require 'mmapscanner'
 
 class InternetMessage
@@ -37,6 +38,12 @@ class InternetMessage
     parse_header
     f = @header['subject'].first
     f && f.value.to_s.gsub(/\r?\n/, '')
+  end
+
+  def date
+    parse_header
+    f = @header['date'].first
+    f && DateTime.parse(f.value.to_s.gsub(/\r?\n/, '')) rescue nil
   end
 
   def content_type

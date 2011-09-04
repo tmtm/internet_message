@@ -9,6 +9,7 @@ To: hogehogera <hoge@example.com>, fugafuga <fuga@example.com>
 Cc: fugafuga <fuga@example.com>
 Subject: test
 Content-Type: Text/Plain; charset=UTF-8
+Date: Sun, 4 Sep 2011 23:14:45 +0900 (JST)
 
 body test
 EOS
@@ -27,6 +28,9 @@ EOS
     end
     it '#subject returns String' do
       subject.subject.should == 'test'
+    end
+    it '#date returns DateTime' do
+      subject.date.should == DateTime.new(2011, 9, 4, 23, 14, 45, '+0900')
     end
     it '#content_type returns ContentType' do
       subject.content_type.should == InternetMessage::ContentType.new('text', 'plain', 'charset'=>'UTF-8')
