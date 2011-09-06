@@ -19,6 +19,7 @@ In-Reply-To: <a.b@example.net> <c.d@example.com>
 References: <a.b@example.net> <c.d@example.com>
 Comments: This is comment message.
 Keywords: hoge, fuga, foo, bar
+Mime-Version: 1.0
 
 body test
 EOS
@@ -78,7 +79,9 @@ EOS
     it '#resent_msg_id'
     it '#return_path'
     it '#received'
-    it '#mime_version'
+    it '#mime_version returns String' do
+      subject.mime_version.should == '1.0'
+    end
     it '#content_type returns ContentType' do
       subject.content_type.should == InternetMessage::ContentType.new('text', 'plain', 'charset'=>'UTF-8')
     end

@@ -133,6 +133,15 @@ class InternetMessage
     keys
   end
 
+  def mime_version
+    parse_header
+    f = @header['mime-version'].first
+    return unless f
+    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    tokens.map(&:value).join
+  end
+
   def subject
     parse_header
     f = @header['subject'].first
