@@ -3,7 +3,7 @@ require 'strscan'
 class InternetMessage
   class Tokenizer
     def initialize(s)
-      @ss = StringScanner.new(s)
+      @ss = StringScanner.new(s.gsub(/\r?\n/, ''))
     end
 
     def tokenize

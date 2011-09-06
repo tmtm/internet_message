@@ -26,46 +26,44 @@ class InternetMessage
   def from
     parse_header
     f = @header['from'].first
-    return unless f
-    Mailbox.parse f.value.to_s.gsub(/\r?\n/, '')
+    f && Mailbox.parse(f.value.to_s)
   end
 
   def sender
     parse_header
     f = @header['sender'].first
-    return unless f
-    Mailbox.parse f.value.to_s.gsub(/\r?\n/, '')
+    f && Mailbox.parse(f.value.to_s)
   end
 
   def reply_to
     parse_header
     f = @header['reply-to'].first
-    f && self.class.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    f && self.class.parse_addrlist(f.value.to_s)
   end
 
   def to
     parse_header
     f = @header['to'].first
-    f && self.class.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    f && self.class.parse_addrlist(f.value.to_s)
   end
 
   def cc
     parse_header
     f = @header['cc'].first
-    f && self.class.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    f && self.class.parse_addrlist(f.value.to_s)
   end
 
   def bcc
     parse_header
     f = @header['bcc'].first
-    f && self.class.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    f && self.class.parse_addrlist(f.value.to_s)
   end
 
   def message_id
     parse_header
     f = @header['message-id'].first
     return unless f
-    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens = Tokenizer.new(f.value.to_s).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
     i = tokens.index(Token.new(:CHAR, '<'))
     return unless i
@@ -79,7 +77,7 @@ class InternetMessage
     parse_header
     f = @header['in-reply-to'].first
     return unless f
-    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens = Tokenizer.new(f.value.to_s).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
     ret = []
     while true
@@ -97,7 +95,7 @@ class InternetMessage
     parse_header
     f = @header['references'].first
     return unless f
-    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens = Tokenizer.new(f.value.to_s).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
     ret = []
     while true
@@ -120,7 +118,7 @@ class InternetMessage
     parse_header
     keys = []
     @header['keywords'].to_a.map do |f|
-      tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+      tokens = Tokenizer.new(f.value.to_s).tokenize
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
       while true
         i = tokens.index(Token.new(:CHAR, ','))
@@ -148,7 +146,7 @@ class InternetMessage
     parse_header
     f = @header['mime-version'].first
     return unless f
-    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens = Tokenizer.new(f.value.to_s).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
     tokens.map(&:value).join
   end
@@ -157,7 +155,7 @@ class InternetMessage
     parse_header
     f = @header['content-transfer-encoding'].first
     return unless f
-    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens = Tokenizer.new(f.value.to_s).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
     tokens.map(&:value).join
   end
@@ -166,7 +164,7 @@ class InternetMessage
     parse_header
     f = @header['content-id'].first
     return unless f
-    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens = Tokenizer.new(f.value.to_s).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
     i = tokens.index(Token.new(:CHAR, '<'))
     return unless i
@@ -185,7 +183,7 @@ class InternetMessage
   def content_type
     parse_header
     f = @header['content-type'].first
-    f && ContentType.parse(f.value.to_s.gsub(/\r?\n/, ''))
+    f && ContentType.parse(f.value.to_s)
   end
 
   def content_description
@@ -197,7 +195,7 @@ class InternetMessage
   def content_disposition
     parse_header
     f = @header['content-disposition'].first
-    f && ContentDisposition.parse(f.value.to_s.gsub(/\r?\n/, ''))
+    f && ContentDisposition.parse(f.value.to_s)
   end
 
   def type
@@ -233,6 +231,30 @@ class InternetMessage
     @parts
   end
 
+  def self.parse_addrlist(str)
+    ret = []
+    tokens = Tokenizer.new(str).tokenize
+    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    until tokens.empty?
+      i = tokens.index(Token.new(:CHAR, ','))
+      if i == 0
+        tokens.shift
+        next
+      end
+      j = tokens.index(Token.new(:CHAR, ':'))
+      if i && j && j < i || !i && j
+        i = tokens.index(Token.new(:CHAR, ';')) || -1
+        ret.push Group.parse(tokens.slice!(0..i))
+      elsif i
+        ret.push Mailbox.parse(tokens.slice!(0..i-1))
+      else
+        ret.push Mailbox.parse(tokens)
+        tokens.clear
+      end
+    end
+    ret
+  end
+
   private
 
   def split_header_body
@@ -256,30 +278,6 @@ class InternetMessage
       @rawheader.skip(/\r?\n/)
     end
     @trace_blocks.clean
-  end
-
-  def self.parse_addrlist(str)
-    ret = []
-    tokens = Tokenizer.new(str).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    until tokens.empty?
-      i = tokens.index(Token.new(:CHAR, ','))
-      if i == 0
-        tokens.shift
-        next
-      end
-      j = tokens.index(Token.new(:CHAR, ':'))
-      if i && j && j < i || !i && j
-        i = tokens.index(Token.new(:CHAR, ';')) || -1
-        ret.push Group.parse(tokens.slice!(0..i))
-      elsif i
-        ret.push Mailbox.parse(tokens.slice!(0..i-1))
-      else
-        ret.push Mailbox.parse(tokens)
-        tokens.clear
-      end
-    end
-    ret
   end
 
   def parse_multipart
@@ -354,33 +352,33 @@ class InternetMessage
 
     def resent_from
       f = self.find{|f| f.name == 'resent-from'}
-      f && Mailbox.parse(f.value.to_s.gsub(/\r?\n/, ''))
+      f && Mailbox.parse(f.value.to_s)
     end
 
     def resent_sender
       f = self.find{|f| f.name == 'resent-sender'}
-      f && Mailbox.parse(f.value.to_s.gsub(/\r?\n/, ''))
+      f && Mailbox.parse(f.value.to_s)
     end
 
     def resent_to
       f = self.find{|f| f.name == 'resent-to'}
-      f && InternetMessage.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+      f && InternetMessage.parse_addrlist(f.value.to_s)
     end
 
     def resent_cc
       f = self.find{|f| f.name == 'resent-cc'}
-      f && InternetMessage.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+      f && InternetMessage.parse_addrlist(f.value.to_s)
     end
 
     def resent_bcc
       f = self.find{|f| f.name == 'resent-bcc'}
-      f && InternetMessage.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+      f && InternetMessage.parse_addrlist(f.value.to_s)
     end
 
     def resent_message_id
       f = self.find{|f| f.name == 'resent-message-id'}
       return unless f
-      tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+      tokens = Tokenizer.new(f.value.to_s).tokenize
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
       i = tokens.index(Token.new(:CHAR, '<'))
       return unless i
@@ -393,7 +391,7 @@ class InternetMessage
     def return_path
       f = self.find{|f| f.name == 'return-path'}
       return unless f
-      tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+      tokens = Tokenizer.new(f.value.to_s).tokenize
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
       i = tokens.index(Token.new(:CHAR, '<'))
       return unless i
@@ -411,7 +409,7 @@ class InternetMessage
 
     def received
       self.select{|f| f.name == 'received'}.map do |f|
-        Received.parse f.value.to_s.gsub(/\r?\n/, '')
+        Received.parse f.value.to_s
       end
     end
   end
