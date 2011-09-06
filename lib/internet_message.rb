@@ -6,6 +6,7 @@ class InternetMessage
   require "#{dir}/internet_message/header_field"
   require "#{dir}/internet_message/mailbox"
   require "#{dir}/internet_message/content_type"
+  require "#{dir}/internet_message/content_disposition"
 
   def initialize(src)
     @src = MmapScanner.new(src)
@@ -195,6 +196,18 @@ class InternetMessage
     parse_header
     f = @header['content-type'].first
     f && ContentType.parse(f.value.to_s.gsub(/\r?\n/, ''))
+  end
+
+  def content_description
+    parse_header
+    f = @header['content-description'].first
+    f && f.value.to_s.gsub(/\r?\n/, '')
+  end
+
+  def content_disposition
+    parse_header
+    f = @header['content-disposition'].first
+    f && ContentDisposition.parse(f.value.to_s.gsub(/\r?\n/, ''))
   end
 
   def type

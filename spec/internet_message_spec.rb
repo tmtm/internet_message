@@ -22,6 +22,8 @@ Keywords: hoge, fuga, foo, bar
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
 Content-Id: <a.b@example.com>
+Content-Description: Description of Contents
+Content-Disposition: inline; filename="hoge.txt"
 
 body test
 EOS
@@ -95,9 +97,12 @@ EOS
     it '#content_id returns String' do
       subject.content_id.should == 'a.b@example.com'
     end
-    it '#content_description'
-    it '#content_disposition'
-
+    it '#content_description returns String' do
+      subject.content_description.should == 'Description of Contents'
+    end
+    it '#content_disposition return ContentDisposition' do
+      subject.content_disposition.should == InternetMessage::ContentDisposition.new('inline', 'filename'=>'hoge.txt')
+    end
     it '#type returns String' do
       subject.type.should == 'text'
     end
