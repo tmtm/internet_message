@@ -15,11 +15,30 @@ class InternetMessage
     @parts = []
   end
 
+  def date
+    parse_header
+    f = @header['date'].first
+    f && DateTime.parse(f.value.to_s.gsub(/\r?\n/, '')) rescue nil
+  end
+
   def from
     parse_header
     f = @header['from'].first
     return unless f
     Mailbox.parse f.value.to_s.gsub(/\r?\n/, '')
+  end
+
+  def sender
+    parse_header
+    f = @header['sender'].first
+    return unless f
+    Mailbox.parse f.value.to_s.gsub(/\r?\n/, '')
+  end
+
+  def reply_to
+    parse_header
+    f = @header['reply-to'].first
+    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
   end
 
   def to
@@ -34,16 +53,90 @@ class InternetMessage
     f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
   end
 
+  def bcc
+    parse_header
+    f = @header['bcc'].first
+    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+  end
+
+  def message_id
+    parse_header
+    f = @header['message-id'].first
+    return unless f
+    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    i = tokens.index(Token.new(:CHAR, '<'))
+    return unless i
+    tokens.shift i+1
+    i = tokens.index(Token.new(:CHAR, '>'))
+    return unless i
+    tokens[0, i].map(&:value).join
+  end
+
+  def in_reply_to
+    parse_header
+    f = @header['in-reply-to'].first
+    return unless f
+    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    ret = []
+    while true
+      i = tokens.index(Token.new(:CHAR, '<'))
+      break unless i
+      tokens.shift i+1
+      i = tokens.index(Token.new(:CHAR, '>'))
+      break unless i
+      ret.push tokens[0, i].map(&:value).join
+    end
+    ret
+  end
+
+  def references
+    parse_header
+    f = @header['references'].first
+    return unless f
+    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    ret = []
+    while true
+      i = tokens.index(Token.new(:CHAR, '<'))
+      break unless i
+      tokens.shift i+1
+      i = tokens.index(Token.new(:CHAR, '>'))
+      break unless i
+      ret.push tokens[0, i].map(&:value).join
+    end
+    ret
+  end
+
+  def comments
+    parse_header
+    @header['comments'].to_a.map{|f| f.value.to_s.gsub(/\r?\n/, '')}
+  end
+
+  def keywords
+    parse_header
+    keys = []
+    @header['keywords'].to_a.map do |f|
+      tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      while true
+        i = tokens.index(Token.new(:CHAR, ','))
+        break unless i
+        if i > 0
+          keys.push tokens[0, i].map(&:value).join(' ')
+        end
+        tokens.shift i+1
+      end
+      keys.push tokens.map(&:value).join(' ') unless tokens.empty?
+    end
+    keys
+  end
+
   def subject
     parse_header
     f = @header['subject'].first
     f && f.value.to_s.gsub(/\r?\n/, '')
-  end
-
-  def date
-    parse_header
-    f = @header['date'].first
-    f && DateTime.parse(f.value.to_s.gsub(/\r?\n/, '')) rescue nil
   end
 
   def content_type
