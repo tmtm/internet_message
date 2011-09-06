@@ -1,4 +1,5 @@
 require "#{File.dirname __FILE__}/tokenizer"
+require "#{File.dirname __FILE__}/address"
 
 class InternetMessage
   class Mailbox
@@ -16,7 +17,7 @@ class InternetMessage
       i = tokens.rindex(Token.new(:CHAR, '@'))
       local = i == 0 ? '' : tokens[0..i-1].map(&:value).join
       domain = tokens[i+1..-1].map(&:value).join
-      Mailbox.new(local, domain, display_name)
+      Mailbox.new(Address.new(local, domain), display_name)
     end
 
     def self.parse_list(src)
@@ -34,18 +35,29 @@ class InternetMessage
       ret
     end
 
-    attr_reader :local_part, :domain, :display_name
+    attr_reader :address, :display_name
 
-    def initialize(local_part, domain, display_name=nil)
-      @local_part, @domain, @display_name = local_part, domain, display_name
+    def initialize(addr, *args)
+      if addr.is_a? Address and args.size <= 1
+        @address = addr
+        @display_name = args.first
+      elsif args.size >= 1 and args.size <= 2
+        @address = Address.new(addr, args[0])
+        @display_name = args[1]
+      else
+        raise ArgumentError
+      end
+    end
+
+    def local_part
+      @address.local_part
+    end
+
+    def domain
+      @address.domain
     end
 
     def to_s
-      if @local_part =~ /\A[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+(\.[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+)*\z/n
-        l = @local_part
-      else
-        l = quote_string(@local_part)
-      end
       if @display_name
         d = @display_name.split(/[ \t]+/).map do |w|
           if w =~ /\A[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+\z/n
@@ -54,9 +66,9 @@ class InternetMessage
             quote_string w
           end
         end.join(' ')
-        "#{d} <#{l}@#{@domain}>"
+        "#{d} <#{@address.to_s}>"
       else
-        "#{l}@#{@domain}"
+        @address.to_s
       end
     end
 
@@ -67,7 +79,7 @@ class InternetMessage
     end
 
     def ==(other)
-      other.is_a?(Mailbox) && other.local_part == self.local_part && other.domain == self.domain && other.display_name == self.display_name
+      other.is_a?(Mailbox) && other.address == self.address && other.display_name == self.display_name
     end
   end
 end
