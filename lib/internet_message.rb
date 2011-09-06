@@ -254,14 +254,18 @@ class InternetMessage
   def parse_header
     return unless @header.empty?
     split_header_body
+    @trace_blocks = TraceBlock.new
     while line = @rawheader.scan(/.*(\r?\n[ \t].*)*(?=\r?\n|\z)/n)
       if line.skip(/(.*?):[ \t]*/)
         field_name = line.matched(1).to_s.downcase
         field_value = line.rest
-        @header[field_name].push HeaderField.new(field_name, field_value, line)
+        field = HeaderField.new(field_name, field_value, line)
+        @header[field_name].push field
+        @trace_blocks.push field
       end
       @rawheader.skip(/\r?\n/)
     end
+    @trace_blocks.clean
   end
 
   def parse_addrlist(str)
@@ -303,6 +307,44 @@ class InternetMessage
     end
     @epilogue = @rawbody.rest.to_s
     @parse_multipart = true
+  end
+
+  class TraceBlock
+    attr_reader :blocks
+
+    def initialize
+      @block = []
+      @blocks = [@block]
+      @state = nil
+    end
+
+    def push(field)
+      case field.name
+      when 'return-path'
+        @block = []
+        @blocks.push @block
+        @block.push field
+        @state = :return
+      when 'received'
+        unless @state == :return or @state == :received
+          @block = []
+          @blocks.push @block
+        end
+        @block.push field
+        @state = :received
+      when /\Aresent-/
+        unless @state == :return or @state == :received or @state == :resent
+          @block = []
+          @blocks.push @block
+        end
+        @block.push field
+        @state = :resent
+      end
+    end
+
+    def clean
+      @blocks.delete_if(&:empty?)
+    end
   end
 
 end

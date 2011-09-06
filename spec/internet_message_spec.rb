@@ -149,3 +149,45 @@ EOS
   end
 
 end
+
+describe InternetMessage::TraceBlock do
+  let(:return_path){double :name=>'return-path'}
+  let(:received){double :name=>'received'}
+  let(:resent){double :name=>'resent-from'}
+  context 'with one block' do
+    before do
+      subject.push return_path
+      subject.push received
+      subject.push received
+      subject.push received
+      subject.clean
+    end
+    its('blocks.size'){should == 1}
+    its('blocks.first'){should == [return_path, received, received, received]}
+  end
+  context 'with many block' do
+    before do
+      subject.push return_path
+      subject.push received
+      subject.push return_path
+      subject.push received
+      subject.push received
+      subject.clean
+    end
+    its('blocks.size'){should == 2}
+    it{subject.blocks.first.should == [return_path, received]}
+    it{subject.blocks[1].should == [return_path, received, received]}
+  end
+  context 'with many block without Return-Path' do
+    before do
+      subject.push received
+      subject.push resent
+      subject.push received
+      subject.push received
+      subject.clean
+    end
+    its('blocks.size'){should == 2}
+    it{subject.blocks.first.should == [received, resent]}
+    it{subject.blocks[1].should == [received, received]}
+  end
+end
