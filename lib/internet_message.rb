@@ -40,25 +40,25 @@ class InternetMessage
   def reply_to
     parse_header
     f = @header['reply-to'].first
-    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    f && self.class.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
   end
 
   def to
     parse_header
     f = @header['to'].first
-    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    f && self.class.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
   end
 
   def cc
     parse_header
     f = @header['cc'].first
-    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    f && self.class.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
   end
 
   def bcc
     parse_header
     f = @header['bcc'].first
-    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    f && self.class.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
   end
 
   def message_id
@@ -135,99 +135,12 @@ class InternetMessage
     keys
   end
 
-  def resent_date
-    parse_header
-    trace = @trace_blocks.first
-    f = trace.find{|f| f.name == 'resent-date'}
-    f && DateTime.parse(f.value.to_s.gsub(/\r?\n/, '')) rescue nil
-  end
-
-  def resent_from
-    parse_header
-    trace = @trace_blocks.first
-    return unless trace
-    f = trace.find{|f| f.name == 'resent-from'}
-    return unless f
-    Mailbox.parse f.value.to_s.gsub(/\r?\n/, '')
-  end
-
-  def resent_sender
-    parse_header
-    trace = @trace_blocks.first
-    return unless trace
-    f = trace.find{|f| f.name == 'resent-sender'}
-    return unless f
-    Mailbox.parse f.value.to_s.gsub(/\r?\n/, '')
-  end
-
-  def resent_to
-    parse_header
-    trace = @trace_blocks.first
-    return unless trace
-    f = trace.find{|f| f.name == 'resent-to'}
-    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
-  end
-
-  def resent_cc
-    parse_header
-    trace = @trace_blocks.first
-    return unless trace
-    f = trace.find{|f| f.name == 'resent-cc'}
-    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
-  end
-
-  def resent_bcc
-    parse_header
-    trace = @trace_blocks.first
-    return unless trace
-    f = trace.find{|f| f.name == 'resent-bcc'}
-    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
-  end
-
-  def resent_message_id
-    parse_header
-    trace = @trace_blocks.first
-    return unless trace
-    f = trace.find{|f| f.name == 'resent-message-id'}
-    return unless f
-    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    i = tokens.index(Token.new(:CHAR, '<'))
-    return unless i
-    tokens.shift i+1
-    i = tokens.index(Token.new(:CHAR, '>'))
-    return unless i
-    tokens[0, i].map(&:value).join
-  end
-
-  def return_path
-    parse_header
-    trace = @trace_blocks.first
-    return unless trace
-    f = trace.find{|f| f.name == 'return-path'}
-    return unless f
-    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    i = tokens.index(Token.new(:CHAR, '<'))
-    return unless i
-    tokens.shift i+1
-    i = tokens.index(Token.new(:CHAR, '>'))
-    return unless i
-    tokens = tokens[0, i]
-    i = tokens.rindex(Token.new(:CHAR, '@'))
-    if i
-      Address.new(tokens[0, i].map(&:value).join, tokens[i+1..-1].map(&:value).join)
-    else
-      nil
-    end
-  end
-
-  def received
-    parse_header
-    trace = @trace_blocks.first
-    return unless trace
-    trace.select{|f| f.name == 'received'}.map do |f|
-      Received.parse f.value.to_s.gsub(/\r?\n/, '')
+  [:resent_date, :resent_from, :resent_sender, :resent_to, :resent_cc,
+    :resent_bcc, :resent_message_id, :return_path, :received].each do |m|
+    define_method m do
+      parse_header
+      trace = @trace_blocks.first
+      trace && trace.method(m).call
     end
   end
 
@@ -345,7 +258,7 @@ class InternetMessage
     @trace_blocks.clean
   end
 
-  def parse_addrlist(str)
+  def self.parse_addrlist(str)
     ret = []
     tokens = Tokenizer.new(str).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
@@ -434,6 +347,72 @@ class InternetMessage
   end
 
   class TraceBlock < Array
-  end
+    def resent_date
+      f = self.find{|f| f.name == 'resent-date'}
+      f && DateTime.parse(f.value.to_s.gsub(/\r?\n/, '')) rescue nil
+    end
 
+    def resent_from
+      f = self.find{|f| f.name == 'resent-from'}
+      f && Mailbox.parse(f.value.to_s.gsub(/\r?\n/, ''))
+    end
+
+    def resent_sender
+      f = self.find{|f| f.name == 'resent-sender'}
+      f && Mailbox.parse(f.value.to_s.gsub(/\r?\n/, ''))
+    end
+
+    def resent_to
+      f = self.find{|f| f.name == 'resent-to'}
+      f && InternetMessage.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    end
+
+    def resent_cc
+      f = self.find{|f| f.name == 'resent-cc'}
+      f && InternetMessage.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    end
+
+    def resent_bcc
+      f = self.find{|f| f.name == 'resent-bcc'}
+      f && InternetMessage.parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+    end
+
+    def resent_message_id
+      f = self.find{|f| f.name == 'resent-message-id'}
+      return unless f
+      tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      i = tokens.index(Token.new(:CHAR, '<'))
+      return unless i
+      tokens.shift i+1
+      i = tokens.index(Token.new(:CHAR, '>'))
+      return unless i
+      tokens[0, i].map(&:value).join
+    end
+
+    def return_path
+      f = self.find{|f| f.name == 'return-path'}
+      return unless f
+      tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      i = tokens.index(Token.new(:CHAR, '<'))
+      return unless i
+      tokens.shift i+1
+      i = tokens.index(Token.new(:CHAR, '>'))
+      return unless i
+      tokens = tokens[0, i]
+      i = tokens.rindex(Token.new(:CHAR, '@'))
+      if i
+        Address.new(tokens[0, i].map(&:value).join, tokens[i+1..-1].map(&:value).join)
+      else
+        nil
+      end
+    end
+
+    def received
+      self.select{|f| f.name == 'received'}.map do |f|
+        Received.parse f.value.to_s.gsub(/\r?\n/, '')
+      end
+    end
+  end
 end
