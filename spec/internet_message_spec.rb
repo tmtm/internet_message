@@ -77,7 +77,9 @@ EOS
     it '#resent_cc'
     it '#resent_bcc'
     it '#resent_msg_id'
-    it '#return_path'
+    it '#return_path returns InernetMessage::Address' do
+      subject.return_path.should == InternetMessage::Address.new('hoge', 'example.com')
+    end
     it '#received'
     it '#mime_version returns String' do
       subject.mime_version.should == '1.0'

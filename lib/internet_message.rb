@@ -133,6 +133,26 @@ class InternetMessage
     keys
   end
 
+  def return_path
+    parse_header
+    f = @header['return-path'].first
+    return unless f
+    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    i = tokens.index(Token.new(:CHAR, '<'))
+    return unless i
+    tokens.shift i+1
+    i = tokens.index(Token.new(:CHAR, '>'))
+    return unless i
+    tokens = tokens[0, i]
+    i = tokens.rindex(Token.new(:CHAR, '@'))
+    if i
+      Address.new(tokens[0, i].map(&:value).join, tokens[i+1..-1].map(&:value).join)
+    else
+      nil
+    end
+  end
+
   def mime_version
     parse_header
     f = @header['mime-version'].first
