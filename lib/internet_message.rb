@@ -162,6 +162,29 @@ class InternetMessage
     tokens.map(&:value).join
   end
 
+  def content_transfer_encoding
+    parse_header
+    f = @header['content-transfer-encoding'].first
+    return unless f
+    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    tokens.map(&:value).join
+  end
+
+  def content_id
+    parse_header
+    f = @header['content-id'].first
+    return unless f
+    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    i = tokens.index(Token.new(:CHAR, '<'))
+    return unless i
+    tokens.shift i+1
+    i = tokens.index(Token.new(:CHAR, '>'))
+    return unless i
+    tokens[0, i].map(&:value).join
+  end
+
   def subject
     parse_header
     f = @header['subject'].first
