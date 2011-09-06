@@ -67,14 +67,20 @@ EOS
       subject.bcc.size.should == 1
       subject.bcc.each{|a| a.should be_kind_of InternetMessage::Mailbox}
     end
-    it '#message_id returns message-id String' do
-      subject.message_id.should == '20101203223001.5C9523E3A70@note.tmtm.org'
+    it '#message_id returns InternetMessage::MessageId' do
+      subject.message_id.should == InternetMessage::MessageId.new('20101203223001.5C9523E3A70@note.tmtm.org')
     end
-    it '#in_reply_to returns Array of String' do
-      subject.in_reply_to.should == ['a.b@example.net', 'c.d@example.com']
+    it '#in_reply_to returns Array of InternetMessage::MessageId' do
+      subject.in_reply_to.should == [
+        InternetMessage::MessageId.new('a.b@example.net'),
+        InternetMessage::MessageId.new('c.d@example.com')
+      ]
     end
-    it '#references returns Array of String' do
-      subject.references.should == ['a.b@example.net', 'c.d@example.com']
+    it '#references returns Array of InternetMessage::MessageId' do
+      subject.references.should == [
+        InternetMessage::MessageId.new('a.b@example.net'),
+        InternetMessage::MessageId.new('c.d@example.com')
+      ]
     end
     it '#subject returns String' do
       subject.subject.should == 'test'
@@ -109,8 +115,8 @@ EOS
       subject.resent_bcc.size.should == 1
       subject.resent_bcc.each{|a| a.should be_kind_of InternetMessage::Mailbox}
     end
-    it '#resent_message_id returns Resent-Message-Id in latest trace block as String' do
-      subject.resent_message_id.should == 'hoge.fuga@example.com'
+    it '#resent_message_id returns Resent-Message-Id in latest trace block as InternetMessage::MessageId' do
+      subject.resent_message_id.should == InternetMessage::MessageId.new('hoge.fuga@example.com')
     end
     it '#return_path returns Return-Path in latest trace block as InernetMessage::Address' do
       subject.return_path.should == InternetMessage::Address.new('hoge', 'example.com')

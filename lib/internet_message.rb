@@ -5,6 +5,7 @@ class InternetMessage
   dir = File.dirname __FILE__
   require "#{dir}/internet_message/header_field"
   require "#{dir}/internet_message/mailbox"
+  require "#{dir}/internet_message/message_id"
   require "#{dir}/internet_message/received"
   require "#{dir}/internet_message/content_type"
   require "#{dir}/internet_message/content_disposition"
@@ -62,15 +63,7 @@ class InternetMessage
   def message_id
     parse_header
     f = @header['message-id'].first
-    return unless f
-    tokens = Tokenizer.new(f.value.to_s).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    i = tokens.index(Token.new(:CHAR, '<'))
-    return unless i
-    tokens.shift i+1
-    i = tokens.index(Token.new(:CHAR, '>'))
-    return unless i
-    tokens[0, i].map(&:value).join
+    f && MessageId.parse(f.value.to_s)
   end
 
   def in_reply_to
@@ -86,7 +79,7 @@ class InternetMessage
       tokens.shift i+1
       i = tokens.index(Token.new(:CHAR, '>'))
       break unless i
-      ret.push tokens[0, i].map(&:value).join
+      ret.push MessageId.new(tokens[0, i].map(&:value).join)
     end
     ret
   end
@@ -104,7 +97,7 @@ class InternetMessage
       tokens.shift i+1
       i = tokens.index(Token.new(:CHAR, '>'))
       break unless i
-      ret.push tokens[0, i].map(&:value).join
+      ret.push MessageId.new(tokens[0, i].map(&:value).join)
     end
     ret
   end
@@ -377,15 +370,7 @@ class InternetMessage
 
     def resent_message_id
       f = self.find{|f| f.name == 'resent-message-id'}
-      return unless f
-      tokens = Tokenizer.new(f.value.to_s).tokenize
-      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-      i = tokens.index(Token.new(:CHAR, '<'))
-      return unless i
-      tokens.shift i+1
-      i = tokens.index(Token.new(:CHAR, '>'))
-      return unless i
-      tokens[0, i].map(&:value).join
+      f && MessageId.parse(f.value.to_s)
     end
 
     def return_path
