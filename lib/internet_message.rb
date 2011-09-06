@@ -5,6 +5,7 @@ class InternetMessage
   dir = File.dirname __FILE__
   require "#{dir}/internet_message/header_field"
   require "#{dir}/internet_message/mailbox"
+  require "#{dir}/internet_message/received"
   require "#{dir}/internet_message/content_type"
   require "#{dir}/internet_message/content_disposition"
 
@@ -134,9 +135,76 @@ class InternetMessage
     keys
   end
 
+  def resent_date
+    parse_header
+    trace = @trace_blocks.first
+    f = trace.find{|f| f.name == 'resent-date'}
+    f && DateTime.parse(f.value.to_s.gsub(/\r?\n/, '')) rescue nil
+  end
+
+  def resent_from
+    parse_header
+    trace = @trace_blocks.first
+    return unless trace
+    f = trace.find{|f| f.name == 'resent-from'}
+    return unless f
+    Mailbox.parse f.value.to_s.gsub(/\r?\n/, '')
+  end
+
+  def resent_sender
+    parse_header
+    trace = @trace_blocks.first
+    return unless trace
+    f = trace.find{|f| f.name == 'resent-sender'}
+    return unless f
+    Mailbox.parse f.value.to_s.gsub(/\r?\n/, '')
+  end
+
+  def resent_to
+    parse_header
+    trace = @trace_blocks.first
+    return unless trace
+    f = trace.find{|f| f.name == 'resent-to'}
+    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+  end
+
+  def resent_cc
+    parse_header
+    trace = @trace_blocks.first
+    return unless trace
+    f = trace.find{|f| f.name == 'resent-cc'}
+    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+  end
+
+  def resent_bcc
+    parse_header
+    trace = @trace_blocks.first
+    return unless trace
+    f = trace.find{|f| f.name == 'resent-bcc'}
+    f && parse_addrlist(f.value.to_s.gsub(/\r?\n/, ''))
+  end
+
+  def resent_message_id
+    parse_header
+    trace = @trace_blocks.first
+    return unless trace
+    f = trace.find{|f| f.name == 'resent-message-id'}
+    return unless f
+    tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
+    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    i = tokens.index(Token.new(:CHAR, '<'))
+    return unless i
+    tokens.shift i+1
+    i = tokens.index(Token.new(:CHAR, '>'))
+    return unless i
+    tokens[0, i].map(&:value).join
+  end
+
   def return_path
     parse_header
-    f = @header['return-path'].first
+    trace = @trace_blocks.first
+    return unless trace
+    f = trace.find{|f| f.name == 'return-path'}
     return unless f
     tokens = Tokenizer.new(f.value.to_s.gsub(/\r?\n/, '')).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
@@ -151,6 +219,15 @@ class InternetMessage
       Address.new(tokens[0, i].map(&:value).join, tokens[i+1..-1].map(&:value).join)
     else
       nil
+    end
+  end
+
+  def received
+    parse_header
+    trace = @trace_blocks.first
+    return unless trace
+    trace.select{|f| f.name == 'received'}.map do |f|
+      Received.parse f.value.to_s.gsub(/\r?\n/, '')
     end
   end
 
@@ -254,7 +331,7 @@ class InternetMessage
   def parse_header
     return unless @header.empty?
     split_header_body
-    @trace_blocks = TraceBlock.new
+    @trace_blocks = TraceBlockList.new
     while line = @rawheader.scan(/.*(\r?\n[ \t].*)*(?=\r?\n|\z)/n)
       if line.skip(/(.*?):[ \t]*/)
         field_name = line.matched(1).to_s.downcase
@@ -309,11 +386,13 @@ class InternetMessage
     @parse_multipart = true
   end
 
-  class TraceBlock
+  class TraceBlockList
+    include Enumerable
+
     attr_reader :blocks
 
     def initialize
-      @block = []
+      @block = TraceBlock.new
       @blocks = [@block]
       @state = nil
     end
@@ -321,20 +400,20 @@ class InternetMessage
     def push(field)
       case field.name
       when 'return-path'
-        @block = []
+        @block = TraceBlock.new
         @blocks.push @block
         @block.push field
         @state = :return
       when 'received'
         unless @state == :return or @state == :received
-          @block = []
+          @block = TraceBlock.new
           @blocks.push @block
         end
         @block.push field
         @state = :received
       when /\Aresent-/
         unless @state == :return or @state == :received or @state == :resent
-          @block = []
+          @block = TraceBlock.new
           @blocks.push @block
         end
         @block.push field
@@ -345,6 +424,16 @@ class InternetMessage
     def clean
       @blocks.delete_if(&:empty?)
     end
+
+    def each
+      @blocks.each do |b|
+        yield b
+      end
+    end
+
+  end
+
+  class TraceBlock < Array
   end
 
 end

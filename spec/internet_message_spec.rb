@@ -5,6 +5,17 @@ describe 'InternetMessage' do
   context 'with simple message' do
     let(:src){<<EOS}
 Return-Path: <hoge@example.com>
+Received: from example.net (localhost) by example.com
+ with SMTP id HOGEHOGE; Tue, 6 Sep 2011 19:49:44 +0900
+Received: from example.org (localhost) by example.net
+ with SMTP id FUGAFUGA; Tue, 6 Sep 2011 19:49:43 +0900
+Resent-Date: Tue, 6 Sep 2011 19:49:42 +0900
+Resent-From: hoge@example.com
+Resent-Sender: fuga@example.net
+Resent-To: test@example.jp, test2@example.test
+Resent-Cc: test3@example.net
+Resent-Bcc:test4@example.org
+Resent-Message-Id: <hoge.fuga@example.com>
 From: TOMITA Masahiro <tommy@tmtm.org>
 Sender: TOMITA Masahiro <tommy@tmtm.org>
 Reply-To: hogehogera <hoge@example.com>, fugafuga <fuga@example.com>
@@ -74,17 +85,41 @@ EOS
     it '#keywords returns Array of String' do
       subject.keywords.should == ['hoge', 'fuga', 'foo', 'bar']
     end
-    it '#resent_date'
-    it '#resent_from'
-    it '#resent_sender'
-    it '#resent_to'
-    it '#resent_cc'
-    it '#resent_bcc'
-    it '#resent_msg_id'
-    it '#return_path returns InernetMessage::Address' do
+    it '#resent_date returns Resent-Date in latest trace block as DateTime' do
+      subject.resent_date.should == DateTime.new(2011, 9, 6, 19, 49, 42, '+0900')
+    end
+    it '#resent_from returns Resent-From in latest trace block as InternetMessage::Mailbox' do
+      subject.resent_from.should == InternetMessage::Mailbox.new('hoge', 'example.com')
+    end
+    it '#resent_sender returns Resent-Sender in latest trace block as InternetMessage::Mailbox' do
+      subject.resent_sender.should == InternetMessage::Mailbox.new('fuga', 'example.net')
+    end
+    it '#resent_to returns Resent-To in latest trace block as InternetMessage::Mailbox' do
+      subject.resent_to.should be_kind_of Array
+      subject.resent_to.size.should == 2
+      subject.resent_to.each{|a| a.should be_kind_of InternetMessage::Mailbox}
+    end
+    it '#resent_cc returns Resent-Cc in latest trace block as InternetMessage::Mailbox' do
+      subject.resent_cc.should be_kind_of Array
+      subject.resent_cc.size.should == 1
+      subject.resent_cc.each{|a| a.should be_kind_of InternetMessage::Mailbox}
+    end
+    it '#resent_bcc returns Resent-Bcc in latest trace block as InternetMessage::Mailbox' do
+      subject.resent_bcc.should be_kind_of Array
+      subject.resent_bcc.size.should == 1
+      subject.resent_bcc.each{|a| a.should be_kind_of InternetMessage::Mailbox}
+    end
+    it '#resent_message_id returns Resent-Message-Id in latest trace block as String' do
+      subject.resent_message_id.should == 'hoge.fuga@example.com'
+    end
+    it '#return_path returns Return-Path in latest trace block as InernetMessage::Address' do
       subject.return_path.should == InternetMessage::Address.new('hoge', 'example.com')
     end
-    it '#received'
+    it '#received return Received in latest trace block as Array of InternetMessage::Received' do
+      subject.received.should be_kind_of Array
+      subject.received.size.should == 2
+      subject.received.each{|a| a.should be_kind_of InternetMessage::Received}
+    end
     it '#mime_version returns String' do
       subject.mime_version.should == '1.0'
     end
@@ -150,7 +185,7 @@ EOS
 
 end
 
-describe InternetMessage::TraceBlock do
+describe InternetMessage::TraceBlockList do
   let(:return_path){double :name=>'return-path'}
   let(:received){double :name=>'received'}
   let(:resent){double :name=>'resent-from'}
