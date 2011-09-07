@@ -135,8 +135,8 @@ EOS
     it '#content_transfer_encoding returns String' do
       subject.content_transfer_encoding.should == '7bit'
     end
-    it '#content_id returns String' do
-      subject.content_id.should == 'a.b@example.com'
+    it '#content_id returns Content-Id as InternetMessage::MessageId' do
+      subject.content_id.should == InternetMessage::MessageId.new('a.b@example.com')
     end
     it '#content_description returns String' do
       subject.content_description.should == 'Description of Contents'

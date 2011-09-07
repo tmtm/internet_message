@@ -69,37 +69,13 @@ class InternetMessage
   def in_reply_to
     parse_header
     f = @header['in-reply-to'].first
-    return unless f
-    tokens = Tokenizer.new(f.value.to_s).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    ret = []
-    while true
-      i = tokens.index(Token.new(:CHAR, '<'))
-      break unless i
-      tokens.shift i+1
-      i = tokens.index(Token.new(:CHAR, '>'))
-      break unless i
-      ret.push MessageId.new(tokens[0, i].map(&:value).join)
-    end
-    ret
+    f && MessageId.parse_list(f.value.to_s)
   end
 
   def references
     parse_header
     f = @header['references'].first
-    return unless f
-    tokens = Tokenizer.new(f.value.to_s).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    ret = []
-    while true
-      i = tokens.index(Token.new(:CHAR, '<'))
-      break unless i
-      tokens.shift i+1
-      i = tokens.index(Token.new(:CHAR, '>'))
-      break unless i
-      ret.push MessageId.new(tokens[0, i].map(&:value).join)
-    end
-    ret
+    f && MessageId.parse_list(f.value.to_s)
   end
 
   def comments
@@ -156,15 +132,7 @@ class InternetMessage
   def content_id
     parse_header
     f = @header['content-id'].first
-    return unless f
-    tokens = Tokenizer.new(f.value.to_s).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    i = tokens.index(Token.new(:CHAR, '<'))
-    return unless i
-    tokens.shift i+1
-    i = tokens.index(Token.new(:CHAR, '>'))
-    return unless i
-    tokens[0, i].map(&:value).join
+    f && MessageId.parse(f.value.to_s)
   end
 
   def subject
