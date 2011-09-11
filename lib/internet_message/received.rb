@@ -6,12 +6,9 @@ class InternetMessage
     def self.parse(src)
       tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
       i = tokens.index(Token.new(:CHAR, ';'))
-      if i
-        date = DateTime.parse(tokens[i+1..-1].map(&:value).join) rescue nil
-        tokens = tokens[0, i]
-      else
-        date = nil
-      end
+      return unless i
+      date = DateTime.parse(tokens[i+1..-1].map(&:value).join) rescue nil
+      tokens = tokens[0, i]
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
       param = {}
       tokens.each_slice(2){|key, val| param[key.value.downcase] = val.value}

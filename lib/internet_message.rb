@@ -13,7 +13,7 @@ class InternetMessage
   def initialize(src)
     @src = MmapScanner.new(src)
     @header = Hash.new{|h,k| h[k] = []}
-    @parse_multipart = false
+    @parsed = @parse_multipart = false
     @preamble = @epilogue = nil
     @parts = []
   end
@@ -39,25 +39,25 @@ class InternetMessage
   def reply_to
     parse_header
     f = @header['reply-to'].first
-    f && self.class.parse_addrlist(f.value.to_s)
+    f ? self.class.parse_addrlist(f.value.to_s) : []
   end
 
   def to
     parse_header
     f = @header['to'].first
-    f && self.class.parse_addrlist(f.value.to_s)
+    f ? self.class.parse_addrlist(f.value.to_s) : []
   end
 
   def cc
     parse_header
     f = @header['cc'].first
-    f && self.class.parse_addrlist(f.value.to_s)
+    f ? self.class.parse_addrlist(f.value.to_s) : []
   end
 
   def bcc
     parse_header
     f = @header['bcc'].first
-    f && self.class.parse_addrlist(f.value.to_s)
+    f ? self.class.parse_addrlist(f.value.to_s) : []
   end
 
   def message_id
@@ -69,13 +69,13 @@ class InternetMessage
   def in_reply_to
     parse_header
     f = @header['in-reply-to'].first
-    f && MessageId.parse_list(f.value.to_s)
+    f ? MessageId.parse_list(f.value.to_s) : []
   end
 
   def references
     parse_header
     f = @header['references'].first
-    f && MessageId.parse_list(f.value.to_s)
+    f ? MessageId.parse_list(f.value.to_s) : []
   end
 
   def comments
@@ -102,12 +102,19 @@ class InternetMessage
     keys
   end
 
-  [:resent_date, :resent_from, :resent_sender, :resent_to, :resent_cc,
-    :resent_bcc, :resent_message_id, :return_path, :received].each do |m|
+  [:resent_date, :resent_from, :resent_sender, :resent_message_id, :return_path].each do |m|
     define_method m do
       parse_header
       trace = @trace_blocks.first
       trace && trace.method(m).call
+    end
+  end
+
+  [:resent_to, :resent_cc, :resent_bcc, :received].each do |m|
+    define_method m do
+      parse_header
+      trace = @trace_blocks.first
+      trace ? trace.method(m).call : []
     end
   end
 
@@ -117,7 +124,7 @@ class InternetMessage
     return unless f
     tokens = Tokenizer.new(f.value.to_s).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    tokens.map(&:value).join
+    tokens.empty? ? nil : tokens.map(&:value).join
   end
 
   def content_transfer_encoding
@@ -126,7 +133,7 @@ class InternetMessage
     return unless f
     tokens = Tokenizer.new(f.value.to_s).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    tokens.map(&:value).join
+    tokens.empty? ? nil : tokens.map(&:value).join
   end
 
   def content_id
@@ -225,7 +232,7 @@ class InternetMessage
   end
 
   def parse_header
-    return unless @header.empty?
+    return if @parsed
     split_header_body
     @trace_blocks = TraceBlockList.new
     while line = @rawheader.scan(/.*(\r?\n[ \t].*)*(?=\r?\n|\z)/n)
@@ -239,6 +246,7 @@ class InternetMessage
       @rawheader.skip(/\r?\n/)
     end
     @trace_blocks.clean
+    @parsed = true
   end
 
   def parse_multipart
@@ -323,17 +331,17 @@ class InternetMessage
 
     def resent_to
       f = self.find{|f| f.name == 'resent-to'}
-      f && InternetMessage.parse_addrlist(f.value.to_s)
+      f ? InternetMessage.parse_addrlist(f.value.to_s) : []
     end
 
     def resent_cc
       f = self.find{|f| f.name == 'resent-cc'}
-      f && InternetMessage.parse_addrlist(f.value.to_s)
+      f ? InternetMessage.parse_addrlist(f.value.to_s) : []
     end
 
     def resent_bcc
       f = self.find{|f| f.name == 'resent-bcc'}
-      f && InternetMessage.parse_addrlist(f.value.to_s)
+      f ? InternetMessage.parse_addrlist(f.value.to_s) : []
     end
 
     def resent_message_id
@@ -361,9 +369,7 @@ class InternetMessage
     end
 
     def received
-      self.select{|f| f.name == 'received'}.map do |f|
-        Received.parse f.value.to_s
-      end
+      self.select{|f| f.name == 'received'}.map{|f| Received.parse f.value.to_s}.compact
     end
   end
 end

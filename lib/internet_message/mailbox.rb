@@ -15,6 +15,7 @@ class InternetMessage
         end
       end
       i = tokens.rindex(Token.new(:CHAR, '@'))
+      return unless i
       local = i == 0 ? '' : tokens[0..i-1].map(&:value).join
       domain = tokens[i+1..-1].map(&:value).join
       Mailbox.new(Address.new(local, domain), display_name)

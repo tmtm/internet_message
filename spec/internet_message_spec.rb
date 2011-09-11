@@ -159,6 +159,113 @@ EOS
     end
   end
 
+  context 'with empty field value' do
+    let(:src){<<EOS}
+Return-Path:
+Received:
+Received:
+Resent-Date:
+Resent-From:
+Resent-Sender:
+Resent-To:
+Resent-Cc:
+Resent-Bcc:
+Resent-Message-Id:
+From:
+Sender:
+Reply-To:
+To:
+Cc:
+Bcc:
+Subject:
+Content-Type:
+Date:
+Message-Id:
+In-Reply-To:
+References:
+Comments:
+Keywords:
+Mime-Version:
+Content-Transfer-Encoding:
+Content-Id:
+Content-Description:
+Content-Disposition:
+
+body test
+EOS
+    its(:date){should be_nil}
+    its(:from){should be_nil}
+    its(:sender){should be_nil}
+    its(:reply_to){should == []}
+    its(:to){should == []}
+    its(:cc){should == []}
+    its(:bcc){should == []}
+    its(:message_id){should be_nil}
+    its(:in_reply_to){should == []}
+    its(:references){should == []}
+    its(:subject){should == ''}
+    its(:comments){should == ['']}
+    its(:keywords){should == []}
+    its(:resent_date){should be_nil}
+    its(:resent_from){should be_nil}
+    its(:resent_sender){should be_nil}
+    its(:resent_to){should == []}
+    its(:resent_cc){should == []}
+    its(:resent_bcc){should == []}
+    its(:resent_message_id){should be_nil}
+    its(:return_path){should be_nil}
+    its(:received){should == []}
+    its(:mime_version){should be_nil}
+    its(:content_type){should be_nil}
+    its(:content_transfer_encoding){should be_nil}
+    its(:content_id){should == nil}
+    its(:content_description){should == ''}
+    its(:content_disposition){should be_nil}
+    its(:type){should == 'text'}
+    its(:subtype){should == 'plain'}
+    its(:charset){should == 'us-ascii'}
+    its(:body){should == "body test\n"}
+  end
+
+  context 'with empty header' do
+    let(:src){<<EOS}
+
+body test
+EOS
+    its(:date){should be_nil}
+    its(:from){should be_nil}
+    its(:sender){should be_nil}
+    its(:reply_to){should == []}
+    its(:to){should == []}
+    its(:cc){should == []}
+    its(:bcc){should == []}
+    its(:message_id){should be_nil}
+    its(:in_reply_to){should == []}
+    its(:references){should == []}
+    its(:subject){should be_nil}
+    its(:comments){should == []}
+    its(:keywords){should == []}
+    its(:resent_date){should be_nil}
+    its(:resent_from){should be_nil}
+    its(:resent_sender){should be_nil}
+    its(:resent_to){should == []}
+    its(:resent_cc){should == []}
+    its(:resent_bcc){should == []}
+    its(:resent_message_id){should be_nil}
+    its(:return_path){should be_nil}
+    its(:received){should == []}
+    its(:mime_version){should be_nil}
+    its(:content_type){should be_nil}
+    its(:content_transfer_encoding){should be_nil}
+    its(:content_id){should == nil}
+    its(:content_description){should be_nil}
+    its(:content_disposition){should be_nil}
+    its(:type){should == 'text'}
+    its(:subtype){should == 'plain'}
+    its(:charset){should == 'us-ascii'}
+    its(:body){should == "body test\n"}
+  end
+
   context 'with multipart message' do
     let(:src){<<EOS}
 Content-Type: Multipart/Mixed; Boundary="abcdefgABCDEFG"
