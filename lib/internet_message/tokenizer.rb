@@ -2,8 +2,11 @@ require 'strscan'
 
 class InternetMessage
   class Tokenizer
-    def initialize(s)
+    TOKEN_RE = /[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~\.]+/n
+
+    def initialize(s, opt={})
       @ss = StringScanner.new(s.gsub(/\r?\n/, ''))
+      @token_re = opt[:token_re] || TOKEN_RE
     end
 
     def tokenize
@@ -12,8 +15,8 @@ class InternetMessage
         case
         when s = @ss.scan(/[ \t]+/)
           ret.push Token.new(:WSP, s)
-        when s = @ss.scan(/[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~\.]+/)
-          ret.push Token.new(:DOT_ATOM, s)
+        when s = @ss.scan(@token_re)
+          ret.push Token.new(:TOKEN, s)
         when s = @ss.scan(/\"(\\.|[^\"])+\"/)
           ret.push Token.new(:QUOTED, s.gsub(/\A\"|\"\z/,'').gsub(/\\(.)/){$1})
         when @ss.check(/\(/)
