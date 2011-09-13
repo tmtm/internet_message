@@ -46,6 +46,8 @@ class InternetMessage
       @type, @value = type, value
     end
 
+    alias to_s value
+
     def ==(other)
       other.is_a?(self.class) && other.type == self.type && other.value == self.value
     end

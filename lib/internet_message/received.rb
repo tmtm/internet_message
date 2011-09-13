@@ -7,7 +7,7 @@ class InternetMessage
       tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
       i = tokens.index(Token.new(:CHAR, ';'))
       return unless i
-      date = DateTime.parse(tokens[i+1..-1].map(&:value).join) rescue nil
+      date = DateTime.parse(tokens[i+1..-1].join) rescue nil
       tokens = tokens[0, i]
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
       param = {}

@@ -93,11 +93,11 @@ class InternetMessage
         i = tokens.index(Token.new(:CHAR, ','))
         break unless i
         if i > 0
-          keys.push tokens[0, i].map(&:value).join(' ')
+          keys.push tokens[0, i].join(' ')
         end
         tokens.shift i+1
       end
-      keys.push tokens.map(&:value).join(' ') unless tokens.empty?
+      keys.push tokens.join(' ') unless tokens.empty?
     end
     keys
   end
@@ -124,7 +124,7 @@ class InternetMessage
     return unless f
     tokens = Tokenizer.new(f.value).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    tokens.empty? ? nil : tokens.map(&:value).join
+    tokens.empty? ? nil : tokens.join
   end
 
   def content_transfer_encoding
@@ -133,7 +133,7 @@ class InternetMessage
     return unless f
     tokens = Tokenizer.new(f.value).tokenize
     tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-    tokens.empty? ? nil : tokens.map(&:value).join
+    tokens.empty? ? nil : tokens.join
   end
 
   def content_id
@@ -362,7 +362,7 @@ class InternetMessage
       tokens = tokens[0, i]
       i = tokens.rindex(Token.new(:CHAR, '@'))
       if i
-        Address.new(tokens[0, i].map(&:value).join, tokens[i+1..-1].map(&:value).join)
+        Address.new(tokens[0, i].join, tokens[i+1..-1].join)
       else
         nil
       end

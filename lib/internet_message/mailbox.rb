@@ -7,7 +7,7 @@ class InternetMessage
       tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
       if i = tokens.index(Token.new(:CHAR, '<'))
-        display_name = tokens[0..i-1].map(&:value).join(' ')
+        display_name = tokens[0..i-1].join(' ')
         if j = tokens.index(Token.new(:CHAR, '>'))
           tokens = tokens[i+1..j-1]
         else
@@ -16,8 +16,8 @@ class InternetMessage
       end
       i = tokens.rindex(Token.new(:CHAR, '@'))
       return unless i
-      local = i == 0 ? '' : tokens[0..i-1].map(&:value).join
-      domain = tokens[i+1..-1].map(&:value).join
+      local = i == 0 ? '' : tokens[0..i-1].join
+      domain = tokens[i+1..-1].join
       Mailbox.new(Address.new(local, domain), display_name)
     end
 

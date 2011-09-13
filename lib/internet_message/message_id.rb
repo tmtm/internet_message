@@ -10,7 +10,7 @@ class InternetMessage
       tokens.shift i+1
       i = tokens.index(Token.new(:CHAR, '>'))
       return unless i
-      self.new tokens[0, i].map(&:value).join
+      self.new tokens[0, i].join
     end
 
     def self.parse_list(str)
@@ -23,7 +23,7 @@ class InternetMessage
         tokens.shift i+1
         i = tokens.index(Token.new(:CHAR, '>'))
         break unless i
-        ret.push MessageId.new(tokens[0, i].map(&:value).join)
+        ret.push MessageId.new(tokens[0, i].join)
       end
       ret
     end

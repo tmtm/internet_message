@@ -44,7 +44,7 @@ describe InternetMessage::Group do
 
   describe '#to_s' do
     let(:display_name){'group'}
-    let(:mailbox_list){[double('Mailbox', :to_s=>'hoge@example.com'), double('Mailbox', :to_s=>'fuga@example.net')]}
+    let(:mailbox_list){[double('Mailbox', :to_str=>'hoge@example.com'), double('Mailbox', :to_str=>'fuga@example.net')]}
     subject{InternetMessage::Group.new(display_name, mailbox_list)}
     it 'return group string' do
       subject.to_s.should == 'group: hoge@example.com, fuga@example.net;'

@@ -8,7 +8,7 @@ class InternetMessage
       i = tokens.index(Token.new(:CHAR, ':'))
       j = tokens.index(Token.new(:CHAR, ';')) || tokens.size
       if i and i < j
-        display_name = i == 0 ? '' : tokens[0..i-1].map(&:value).join(' ')
+        display_name = i == 0 ? '' : tokens[0..i-1].join(' ')
         mailbox_list = Mailbox.parse_list(tokens[i+1..j-1])
         Group.new(display_name, mailbox_list)
       else
@@ -30,7 +30,7 @@ class InternetMessage
           quote_string w
         end
       end.join(' ')
-      "#{d}: "+mailbox_list.map(&:to_s).join(', ')+';'
+      "#{d}: "+mailbox_list.join(', ')+';'
     end
 
     private
