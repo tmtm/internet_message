@@ -3,8 +3,7 @@ require "#{File.dirname __FILE__}/tokenizer"
 class InternetMessage
   class MessageId
     def self.parse(str)
-      tokens = Tokenizer.new(str).tokenize
-      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      tokens = Tokenizer.new(str).tokenize2
       i = tokens.index(Token.new(:CHAR, '<'))
       return unless i
       tokens.shift i+1
@@ -14,8 +13,7 @@ class InternetMessage
     end
 
     def self.parse_list(str)
-      tokens = Tokenizer.new(str).tokenize
-      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      tokens = Tokenizer.new(str).tokenize2
       ret = []
       while true
         i = tokens.index(Token.new(:CHAR, '<'))

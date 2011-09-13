@@ -9,23 +9,28 @@ class InternetMessage
       @token_re = opt[:token_re] || TOKEN_RE
     end
 
-    def tokenize
+    def tokenize(opt={})
       ret = []
       until @ss.eos?
         case
         when s = @ss.scan(/[ \t]+/)
-          ret.push Token.new(:WSP, s)
+          ret.push Token.new(:WSP, s) unless opt[:skip_wsp]
         when s = @ss.scan(@token_re)
           ret.push Token.new(:TOKEN, s)
         when s = @ss.scan(/\"(\\.|[^\"])+\"/)
           ret.push Token.new(:QUOTED, s.gsub(/\A\"|\"\z/,'').gsub(/\\(.)/){$1})
         when @ss.check(/\(/)
-          ret.push Token.new(:COMMENT, scan_comment)
+          comment = scan_comment
+          ret.push Token.new(:COMMENT, comment) unless opt[:skip_comment]
         else
           ret.push Token.new(:CHAR, @ss.scan(/./))
         end
       end
       ret
+    end
+
+    def tokenize2
+      tokenize(:skip_wsp=>true, :skip_comment=>true)
     end
 
     def scan_comment

@@ -87,8 +87,7 @@ class InternetMessage
     parse_header
     keys = []
     @header['keywords'].to_a.map do |f|
-      tokens = Tokenizer.new(f.value).tokenize
-      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      tokens = Tokenizer.new(f.value).tokenize2
       while true
         i = tokens.index(Token.new(:CHAR, ','))
         break unless i
@@ -122,8 +121,7 @@ class InternetMessage
     parse_header
     f = @header['mime-version'].first
     return unless f
-    tokens = Tokenizer.new(f.value).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    tokens = Tokenizer.new(f.value).tokenize2
     tokens.empty? ? nil : tokens.join
   end
 
@@ -131,8 +129,7 @@ class InternetMessage
     parse_header
     f = @header['content-transfer-encoding'].first
     return unless f
-    tokens = Tokenizer.new(f.value).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    tokens = Tokenizer.new(f.value).tokenize2
     tokens.empty? ? nil : tokens.join
   end
 
@@ -201,8 +198,7 @@ class InternetMessage
 
   def self.parse_addrlist(str)
     ret = []
-    tokens = Tokenizer.new(str).tokenize
-    tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+    tokens = Tokenizer.new(str).tokenize2
     until tokens.empty?
       i = tokens.index(Token.new(:CHAR, ','))
       if i == 0
@@ -352,8 +348,7 @@ class InternetMessage
     def return_path
       f = self.find{|f| f.name == 'return-path'}
       return unless f
-      tokens = Tokenizer.new(f.value).tokenize
-      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
+      tokens = Tokenizer.new(f.value).tokenize2
       i = tokens.index(Token.new(:CHAR, '<'))
       return unless i
       tokens.shift i+1
