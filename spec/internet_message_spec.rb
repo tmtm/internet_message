@@ -296,6 +296,30 @@ EOS
     end
   end
 
+  context 'with base64 encoding' do
+    let(:src){<<EOS}
+Content-Transfer-Encoding: Base64
+
+MDEyMzQ1Njc4OUFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFla
+EOS
+    it '#body returns decoded body' do
+      subject.body.should == '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    end
+  end
+
+  context 'with quoted-printable encoding' do
+    let(:src){<<EOS}
+Content-Transfer-Encoding: Quoted-Printable
+
+0123456789=
+ABCDEFGHIJKLMNO=
+=50=51=52=53=54=55=56=57=58=59=5A=
+EOS
+    it '#body returns decoded body' do
+      subject.body.should == '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    end
+  end
+
 end
 
 describe InternetMessage::TraceBlockList do

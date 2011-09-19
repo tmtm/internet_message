@@ -1,4 +1,5 @@
 require 'date'
+require 'base64'
 require 'mmapscanner'
 
 class InternetMessage
@@ -16,6 +17,7 @@ class InternetMessage
     @parsed = @parse_multipart = false
     @preamble = @epilogue = nil
     @parts = []
+    @rawheader = @rawbody = nil
   end
 
   def date
@@ -178,6 +180,12 @@ class InternetMessage
   def body
     parse_header
     s = @rawbody.to_s
+    case content_transfer_encoding.to_s.downcase
+    when 'base64'
+      s = Base64.decode64 s
+    when 'quoted-printable'
+      s = s.unpack('M').join
+    end
     s.force_encoding(charset) rescue s
   end
 
