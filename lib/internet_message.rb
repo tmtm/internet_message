@@ -11,13 +11,14 @@ class InternetMessage
   require "#{dir}/internet_message/content_type"
   require "#{dir}/internet_message/content_disposition"
 
-  def initialize(src)
+  def initialize(src, opt={})
     @src = MmapScanner.new(src)
     @header = Hash.new{|h,k| h[k] = []}
     @parsed = @parse_multipart = false
     @preamble = @epilogue = nil
     @parts = []
     @rawheader = @rawbody = nil
+    @decode_mime_header = opt[:decode_mime_header]
   end
 
   def date
@@ -29,37 +30,37 @@ class InternetMessage
   def from
     parse_header
     f = @header['from'].first
-    f && Mailbox.parse(f.value)
+    f && Mailbox.parse(f.value, @decode_mime_header)
   end
 
   def sender
     parse_header
     f = @header['sender'].first
-    f && Mailbox.parse(f.value)
+    f && Mailbox.parse(f.value, @decode_mime_header)
   end
 
   def reply_to
     parse_header
     f = @header['reply-to'].first
-    f ? self.class.parse_addrlist(f.value) : []
+    f ? self.class.parse_addrlist(f.value, @decode_mime_header) : []
   end
 
   def to
     parse_header
     f = @header['to'].first
-    f ? self.class.parse_addrlist(f.value) : []
+    f ? self.class.parse_addrlist(f.value, @decode_mime_header) : []
   end
 
   def cc
     parse_header
     f = @header['cc'].first
-    f ? self.class.parse_addrlist(f.value) : []
+    f ? self.class.parse_addrlist(f.value, @decode_mime_header) : []
   end
 
   def bcc
     parse_header
     f = @header['bcc'].first
-    f ? self.class.parse_addrlist(f.value) : []
+    f ? self.class.parse_addrlist(f.value, @decode_mime_header) : []
   end
 
   def message_id
@@ -82,7 +83,10 @@ class InternetMessage
 
   def comments
     parse_header
-    @header['comments'].to_a.map{|f| f.value.gsub(/\r?\n/, '')}
+    @header['comments'].to_a.map do |f|
+      s = f.value.gsub(/\r?\n/, '')
+      @decode_mime_header ? InternetMessage.decode_mime_header_str(s) : s
+    end
   end
 
   def keywords
@@ -94,11 +98,15 @@ class InternetMessage
         i = tokens.index(Token.new(:CHAR, ','))
         break unless i
         if i > 0
-          keys.push tokens[0, i].join(' ')
+          key = @decode_mime_header ? InternetMessage.decode_mime_header_words(tokens[0, i]) : tokens[0, i].join(' ')
+          keys.push key
         end
         tokens.shift i+1
       end
-      keys.push tokens.join(' ') unless tokens.empty?
+      unless tokens.empty?
+        key = @decode_mime_header ? InternetMessage.decode_mime_header_words(tokens) : tokens.join(' ')
+        keys.push key
+      end
     end
     keys
   end
@@ -144,7 +152,9 @@ class InternetMessage
   def subject
     parse_header
     f = @header['subject'].first
-    f && f.value.gsub(/\r?\n/, '')
+    return unless f
+    s = f.value.gsub(/\r?\n/, '')
+    @decode_mime_header ? InternetMessage.decode_mime_header_str(s) : s
   end
 
   def content_type
@@ -156,7 +166,9 @@ class InternetMessage
   def content_description
     parse_header
     f = @header['content-description'].first
-    f && f.value.gsub(/\r?\n/, '')
+    return unless f
+    s = f.value.gsub(/\r?\n/, '')
+    @decode_mime_header ? InternetMessage.decode_mime_header_str(s) : s
   end
 
   def content_disposition
@@ -204,7 +216,7 @@ class InternetMessage
     @parts
   end
 
-  def self.parse_addrlist(str)
+  def self.parse_addrlist(str, decode_mime_header=nil)
     ret = []
     tokens = Tokenizer.new(str).tokenize2
     until tokens.empty?
@@ -216,12 +228,46 @@ class InternetMessage
       j = tokens.index(Token.new(:CHAR, ':'))
       if i && j && j < i || !i && j
         i = tokens.index(Token.new(:CHAR, ';')) || -1
-        ret.push Group.parse(tokens.slice!(0..i))
+        ret.push Group.parse(tokens.slice!(0..i), decode_mime_header)
       elsif i
-        ret.push Mailbox.parse(tokens.slice!(0..i-1))
+        ret.push Mailbox.parse(tokens.slice!(0..i-1), decode_mime_header)
       else
-        ret.push Mailbox.parse(tokens)
+        ret.push Mailbox.parse(tokens, decode_mime_header)
         tokens.clear
+      end
+    end
+    ret
+  end
+
+  def self.decode_mime_header_str(str)
+    decode_mime_header_words(str.split(/([ \t]+)/, -1))
+  end
+
+  def self.decode_mime_header_words(words)
+    ret = ''
+    after_mime = nil
+    prev_sp = ' '
+    words.each do |word|
+      s = word.to_s
+      if s =~ /\A[ \t]+\z/
+        prev_sp = s
+        next
+      end
+      if (word.is_a?(Token) ? word.type == :TOKEN : true) && s =~ /\A=\?([^?]+)\?([bq])\?([^?]+)\?=\z/i
+        charset, enc, data = $1, $2, $3
+        if enc.downcase == 'b'
+          data = Base64.decode64(data)
+        else
+          data = data.gsub(/_/,' ').unpack('M').join
+        end
+        data = data.force_encoding(charset) rescue data
+        ret.concat prev_sp if after_mime == false
+        ret.concat data.encode(Encoding::UTF_8, :invalid=>:replace, :undef=>:replace)
+        after_mime = true
+      else
+        ret.concat prev_sp unless after_mime.nil?
+        ret.concat s
+        after_mime = false
       end
     end
     ret
@@ -325,27 +371,27 @@ class InternetMessage
 
     def resent_from
       f = self.find{|f| f.name == 'resent-from'}
-      f && Mailbox.parse(f.value)
+      f && Mailbox.parse(f.value, @decode_mime_header)
     end
 
     def resent_sender
       f = self.find{|f| f.name == 'resent-sender'}
-      f && Mailbox.parse(f.value)
+      f && Mailbox.parse(f.value, @decode_mime_header)
     end
 
     def resent_to
       f = self.find{|f| f.name == 'resent-to'}
-      f ? InternetMessage.parse_addrlist(f.value) : []
+      f ? InternetMessage.parse_addrlist(f.value, @decode_mime_header) : []
     end
 
     def resent_cc
       f = self.find{|f| f.name == 'resent-cc'}
-      f ? InternetMessage.parse_addrlist(f.value) : []
+      f ? InternetMessage.parse_addrlist(f.value, @decode_mime_header) : []
     end
 
     def resent_bcc
       f = self.find{|f| f.name == 'resent-bcc'}
-      f ? InternetMessage.parse_addrlist(f.value) : []
+      f ? InternetMessage.parse_addrlist(f.value, @decode_mime_header) : []
     end
 
     def resent_message_id

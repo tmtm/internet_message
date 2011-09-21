@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require "#{File.dirname __FILE__}/../lib/internet_message"
 
 describe 'InternetMessage' do
@@ -320,6 +321,45 @@ EOS
     end
   end
 
+  context 'with :decode_mime_header=>true' do
+    subject{InternetMessage.new(src, :decode_mime_header=>true)}
+    context 'for ascii header' do
+      let(:src){<<EOS}
+From: TOMITA Masahiro <tommy@tmtm.org>
+To: TOMITA Masahiro <tommy@tmtm.org>
+Subject: test aiueo
+Content-Description: test aiueo
+Comments: test aiueo
+Keywords: abc, def, ghi
+EOS
+      it 'parse header' do
+        subject.from.display_name.should == 'TOMITA Masahiro'
+        subject.to.first.display_name.should == 'TOMITA Masahiro'
+        subject.subject.should == 'test aiueo'
+        subject.content_description.should == 'test aiueo'
+        subject.comments.should == ['test aiueo']
+        subject.keywords.should == ['abc', 'def', 'ghi']
+      end
+    end
+    context 'for encoded header' do
+      let(:src){<<EOS}
+From: =?ISO-2022-JP?B?GyRCJEgkXyQ/JF4kNSRSJG0bKEI=?= <tommy@tmtm.org>
+To: =?ISO-2022-JP?B?GyRCJEgkXyQ/JF4kNSRSJG0bKEI=?= <tommy@tmtm.org>
+Subject: =?ISO-2022-JP?B?GyRCJUYlOSVIGyhCIBskQiQiJCQkJiQoJCobKEI=?=
+Content-Description: =?ISO-2022-JP?B?GyRCJUYlOSVIGyhCIBskQiQiJCQkJiQoJCobKEI=?=
+Comments: =?ISO-2022-JP?B?GyRCJUYlOSVIGyhCIBskQiQiJCQkJiQoJCobKEI=?=
+Keywords: =?UTF-8?B?44GC?=, =?UTF-8?B?44GE?=, =?UTF-8?B?44GG?=
+EOS
+      it 'decode mime header' do
+        subject.from.display_name.should == 'とみたまさひろ'
+        subject.to.first.display_name.should == 'とみたまさひろ'
+        subject.subject.should == 'テスト あいうえお'
+        subject.content_description.should == 'テスト あいうえお'
+        subject.comments.should == ['テスト あいうえお']
+        subject.keywords.should == ['あ', 'い', 'う']
+      end
+    end
+  end
 end
 
 describe InternetMessage::TraceBlockList do

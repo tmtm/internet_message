@@ -3,11 +3,11 @@ require "#{File.dirname __FILE__}/address"
 
 class InternetMessage
   class Mailbox
-    def self.parse(src)
+    def self.parse(src, decode_mime_header=nil)
       tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
       if i = tokens.index(Token.new(:CHAR, '<'))
-        display_name = tokens[0..i-1].join(' ')
+        display_name = decode_mime_header ? InternetMessage.decode_mime_header_words(tokens[0..i-1]) : tokens[0..i-1].join(' ')
         if j = tokens.index(Token.new(:CHAR, '>'))
           tokens = tokens[i+1..j-1]
         else
