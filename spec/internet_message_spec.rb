@@ -362,6 +362,70 @@ EOS
   end
 end
 
+describe 'InternetMessage.decode_mime_header_str' do
+  subject{InternetMessage.decode_mime_header_str(src)}
+  context 'with "=?ISO-8859-1?Q?a?="' do
+    let(:src){'=?ISO-8859-1?Q?a?='}
+    it{should == 'a'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?= b"' do
+    let(:src){'=?ISO-8859-1?Q?a?= b'}
+    it{should == 'a b'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?= =?ISO-8859-1?Q?b?="' do
+    let(:src){'=?ISO-8859-1?Q?a?= =?ISO-8859-1?Q?b?='}
+    it{should == 'ab'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?=  =?ISO-8859-1?Q?b?="' do
+    let(:src){'=?ISO-8859-1?Q?a?=  =?ISO-8859-1?Q?b?='}
+    it{should == 'ab'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?=\r\n =?ISO-8859-1?Q?b?="' do
+    let(:src){"=?ISO-8859-1?Q?a?=\r\n =?ISO-8859-1?Q?b?="}
+    it{should == 'ab'}
+  end
+  context 'with "=?ISO-8859-1?Q?a_b?="' do
+    let(:src){'=?ISO-8859-1?Q?a_b?='}
+    it{should == 'a b'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?= =?ISO-8859-2?Q?_b?="' do
+    let(:src){'=?ISO-8859-1?Q?a?= =?ISO-8859-2?Q?_b?='}
+    it{should == 'a b'}
+  end
+end
+
+describe 'InternetMessage.decode_mime_header_words' do
+  subject{InternetMessage.decode_mime_header_words(InternetMessage::Tokenizer.new(src).tokenize)}
+  context 'with "=?ISO-8859-1?Q?a?="' do
+    let(:src){'=?ISO-8859-1?Q?a?='}
+    it{should == 'a'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?= b"' do
+    let(:src){'=?ISO-8859-1?Q?a?= b'}
+    it{should == 'a b'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?= =?ISO-8859-1?Q?b?="' do
+    let(:src){'=?ISO-8859-1?Q?a?= =?ISO-8859-1?Q?b?='}
+    it{should == 'ab'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?=  =?ISO-8859-1?Q?b?="' do
+    let(:src){'=?ISO-8859-1?Q?a?=  =?ISO-8859-1?Q?b?='}
+    it{should == 'ab'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?=\r\n =?ISO-8859-1?Q?b?="' do
+    let(:src){"=?ISO-8859-1?Q?a?=\r\n =?ISO-8859-1?Q?b?="}
+    it{should == 'ab'}
+  end
+  context 'with "=?ISO-8859-1?Q?a_b?="' do
+    let(:src){'=?ISO-8859-1?Q?a_b?='}
+    it{should == 'a b'}
+  end
+  context 'with "=?ISO-8859-1?Q?a?= =?ISO-8859-2?Q?_b?="' do
+    let(:src){'=?ISO-8859-1?Q?a?= =?ISO-8859-2?Q?_b?='}
+    it{should == 'a b'}
+  end
+end
+
 describe InternetMessage::TraceBlockList do
   let(:return_path){double :name=>'return-path'}
   let(:received){double :name=>'received'}

@@ -240,7 +240,7 @@ class InternetMessage
   end
 
   def self.decode_mime_header_str(str)
-    decode_mime_header_words(str.split(/([ \t]+)/, -1))
+    decode_mime_header_words(str.split(/([ \t\r\n]+)/, -1))
   end
 
   def self.decode_mime_header_words(words)
@@ -249,7 +249,7 @@ class InternetMessage
     prev_sp = ' '
     words.each do |word|
       s = word.to_s
-      if s =~ /\A[ \t]+\z/
+      if s =~ /\A[ \t\r\n]+\z/
         prev_sp = s
         next
       end
