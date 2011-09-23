@@ -9,10 +9,34 @@ class InternetMessage
       return unless i
       date = DateTime.parse(tokens[i+1..-1].join) rescue nil
       tokens = tokens[0, i]
-      tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
-      param = {}
-      tokens.each_slice(2){|key, val| param[key.value.downcase] = val.value}
-      self.new(*param.values_at('from', 'by', 'via', 'with', 'id', 'for'), date)
+
+      list = tokens.inject([[]]){|r, t|
+        if t.type == :WSP or t.type == :COMMENT
+          r.push []
+        else
+          r.last.push t
+        end
+        r
+      }.reject(&:empty?)
+
+      while list.size >= 2
+        case list.shift.join.downcase
+        when 'from'
+          from = list.shift.join
+        when 'by'
+          by = list.shift.join
+        when 'via'
+          via = list.shift.join
+        when 'with'
+          with = list.shift.join
+        when 'id'
+          id = list.shift.join
+        when 'for'
+          m = Mailbox.parse(list.shift)
+          for_ = m && m.address
+        end
+      end
+      self.new(from, by, via, with, id, for_, date)
     end
 
     attr_reader :from, :by, :via, :with, :id, :for, :date
