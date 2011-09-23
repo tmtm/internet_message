@@ -21,18 +21,18 @@ class InternetMessage
       Mailbox.new(Address.new(local, domain), display_name)
     end
 
-    def self.parse_list(src)
+    def self.parse_list(src, decode_mime_header=nil)
       tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
       ret = []
       until tokens.empty?
         i = tokens.index(Token.new(:CHAR, ','))
         break unless i
         if i > 0
-          ret.push self.parse(tokens.slice!(0, i))
+          ret.push self.parse(tokens.slice!(0, i), decode_mime_header)
         end
         tokens.shift
       end
-      ret.push self.parse(tokens) unless tokens.empty?
+      ret.push self.parse(tokens, decode_mime_header) unless tokens.empty?
       ret
     end
 

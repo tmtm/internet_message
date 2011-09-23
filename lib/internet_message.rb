@@ -6,6 +6,7 @@ class InternetMessage
   dir = File.dirname __FILE__
   require "#{dir}/internet_message/header_field"
   require "#{dir}/internet_message/mailbox"
+  require "#{dir}/internet_message/group"
   require "#{dir}/internet_message/message_id"
   require "#{dir}/internet_message/received"
   require "#{dir}/internet_message/content_type"
