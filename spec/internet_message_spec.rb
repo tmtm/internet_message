@@ -360,6 +360,23 @@ EOS
       end
     end
   end
+
+  context 'with message/* type' do
+    let(:src){<<EOS}
+Content-Type: message/rfc822
+
+From: TOMITA Masahiro <tommy@tmtm.org>
+Subject: test
+
+body
+EOS
+    it '.message returns InternetMessage' do
+      m = subject.message
+      m.from.should == InternetMessage::Mailbox.new('tommy', 'tmtm.org', 'TOMITA Masahiro')
+      m.subject.should == 'test'
+      m.body.should == "body\n"
+    end
+  end
 end
 
 describe 'InternetMessage.decode_mime_header_str' do

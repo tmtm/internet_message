@@ -13,6 +13,7 @@ class InternetMessage
 
   def initialize(src, opt={})
     @src = MmapScanner.new(src)
+    @opt = opt
     @header = Hash.new{|h,k| h[k] = []}
     @parsed = @parse_multipart = false
     @preamble = @epilogue = nil
@@ -214,6 +215,11 @@ class InternetMessage
   def parts
     parse_multipart
     @parts
+  end
+
+  def message
+    parse_header
+    InternetMessage.new(@rawbody, @opt)
   end
 
   def self.parse_addrlist(str, decode_mime_header=nil)
