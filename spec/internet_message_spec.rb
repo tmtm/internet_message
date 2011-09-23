@@ -158,6 +158,18 @@ EOS
       subject.body.should == "body test\n"
       subject.body.encoding.should == Encoding::UTF_8
     end
+    it '#preamble returns nil' do
+      subject.preamble.should == nil
+    end
+    it '#epilogue returns nil' do
+      subject.epilogue.should == nil
+    end
+    it '#parts returns []' do
+      subject.parts.should == []
+    end
+    it '#message returns nil' do
+      subject.message.should == nil
+    end
   end
 
   context 'with empty field value' do
@@ -226,6 +238,10 @@ EOS
     its(:subtype){should == 'plain'}
     its(:charset){should == 'us-ascii'}
     its(:body){should == "body test\n"}
+    its(:preamble){should be_nil}
+    its(:epilogue){should be_nil}
+    its(:parts){should == []}
+    its(:message){should be_nil}
   end
 
   context 'with empty header' do
@@ -265,6 +281,10 @@ EOS
     its(:subtype){should == 'plain'}
     its(:charset){should == 'us-ascii'}
     its(:body){should == "body test\n"}
+    its(:preamble){should be_nil}
+    its(:epilogue){should be_nil}
+    its(:parts){should == []}
+    its(:message){should be_nil}
   end
 
   context 'with multipart message' do

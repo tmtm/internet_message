@@ -218,8 +218,7 @@ class InternetMessage
   end
 
   def message
-    parse_header
-    InternetMessage.new(@rawbody, @opt)
+    type == 'message' ? InternetMessage.new(@rawbody, @opt) : nil
   end
 
   def self.parse_addrlist(str, decode_mime_header=nil)
@@ -307,7 +306,9 @@ class InternetMessage
 
   def parse_multipart
     return if @parse_multipart
+    return unless content_type
     boundary = content_type.attribute['boundary']
+    return unless boundary
     b_re = Regexp.escape boundary
     @rawbody.skip(/(.*?)^--#{b_re}(\r?\n|\z)/nm) or return
     @preamble = @rawbody.matched(1).to_s.chomp
