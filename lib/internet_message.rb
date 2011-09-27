@@ -23,6 +23,12 @@ class InternetMessage
     @decode_mime_header = opt[:decode_mime_header]
   end
 
+  def close
+    if @src.data.respond_to? :unmap
+      @src.data.unmap
+    end
+  end
+
   def date
     parse_header
     f = @header['date'].first
