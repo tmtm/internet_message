@@ -1,4 +1,5 @@
 require "#{File.dirname __FILE__}/tokenizer"
+require "#{File.dirname __FILE__}/content_attribute"
 
 class InternetMessage
   class ContentType
@@ -13,13 +14,7 @@ class InternetMessage
       end
       type, subtype = tokens[0].value, tokens[2].value
       tokens.shift 3
-      attr = {}
-      until tokens.empty?
-        break unless tokens.size >= 4 && tokens[0].value == ';' && tokens[2].value == '='
-        attr[tokens[1].value.downcase] = tokens[3].value
-        tokens.shift 3
-      end
-      ContentType.new(type, subtype, attr)
+      ContentType.new(type, subtype, ContentAttribute.parse_attribute(tokens))
     end
 
     attr_reader :type, :subtype, :attribute

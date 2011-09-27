@@ -381,6 +381,40 @@ EOS
     end
   end
 
+  context 'with RFC2231' do
+    subject{InternetMessage.new(src)}
+    context 'splited parameter' do
+      let(:src){<<EOS}
+Content-Disposition: attachment;
+ filename*0="hoge";
+ filename*1="hoge.txt"
+EOS
+      it 'parameter is decoded' do
+        subject.content_disposition.attribute['filename'].should == 'hogehoge.txt'
+      end
+    end
+    context 'extended parameter' do
+      let(:src){<<EOS}
+Content-Disposition: attachment;
+ filename*=us-ascii'en-us'This%20is%20%2A%2A%2Afun%2A%2A%2A
+EOS
+      it 'parameter is decoded' do
+        subject.content_disposition.attribute['filename'].should == 'This is ***fun***'
+      end
+    end
+    context 'complex parameter' do
+      let(:src){<<EOS}
+Content-Type: application/x-stuff;
+ title*0*=us-ascii'en'This%20is%20even%20more%20;
+ title*1*=%2A%2A%2Afun%2A%2A%2A%20;
+ title*2="isn't it!"
+EOS
+      it 'parameter is decoded' do
+        subject.content_type.attribute['title'].should == "This is even more ***fun*** isn't it!"
+      end
+    end
+  end
+
   context 'with message/* type' do
     let(:src){<<EOS}
 Content-Type: message/rfc822

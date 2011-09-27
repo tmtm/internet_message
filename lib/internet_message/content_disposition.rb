@@ -1,4 +1,5 @@
 require "#{File.dirname __FILE__}/tokenizer"
+require "#{File.dirname __FILE__}/content_attribute"
 
 class InternetMessage
   class ContentDisposition
@@ -13,13 +14,7 @@ class InternetMessage
       end
       type = tokens[0].value
       tokens.shift
-      attr = {}
-      until tokens.empty?
-        break unless tokens.size >= 4 && tokens[0].value == ';' && tokens[2].value == '='
-        attr[tokens[1].value.downcase] = tokens[3].value
-        tokens.shift 3
-      end
-      ContentDisposition.new(type, attr)
+      ContentDisposition.new(type, ContentAttribute.parse_attribute(tokens))
     end
 
     attr_reader :type, :attribute
