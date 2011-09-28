@@ -15,13 +15,13 @@ class InternetMessage
   def initialize(src, opt={})
     @src = MmapScanner.new(src)
     @opt = opt
-    @header = Hash.new{|h,k| h[k] = []}
     @parsed = @parse_multipart = false
     @preamble = @epilogue = nil
     @parts = []
     @rawheader = @rawbody = nil
     @decode_mime_header = opt[:decode_mime_header]
     @fields = []
+    @field = Hash.new{|h,k| h[k] = []}
   end
 
   def close
@@ -35,160 +35,73 @@ class InternetMessage
     @fields
   end
 
-  def date
+  def field
     parse_header
-    f = @header['date'].first
-    f && DateTime.parse(f.value.gsub(/\r?\n/, '')) rescue nil
+    @field
+  end
+
+  [:date, :message_id, :mime_version, :content_transfer_encoding, :content_id, :content_type, :content_disposition].each do |m|
+    n = m.to_s.gsub(/_/, '-')
+    define_method m do
+      f = field[n].first
+      f && f.parse
+    end
   end
 
   def from
-    parse_header
-    f = @header['from'].first
-    f && Mailbox.parse(f.value, @decode_mime_header)
+    f = field['from'].first
+    f && f.parse(@decode_mime_header).first
   end
 
-  def sender
-    parse_header
-    f = @header['sender'].first
-    f && Mailbox.parse(f.value, @decode_mime_header)
+  [:sender, :subject, :content_description].each do |m|
+    n = m.to_s.gsub(/_/, '-')
+    define_method m do
+      f = field[n].first
+      f && f.parse(@decode_mime_header)
+    end
   end
 
-  def reply_to
-    parse_header
-    f = @header['reply-to'].first
-    f ? self.class.parse_addrlist(f.value, @decode_mime_header) : []
+  [:in_reply_to, :references].each do |m|
+    n = m.to_s.gsub(/_/, '-')
+    define_method m do
+      f = field[n].first
+      f && f.parse || []
+    end
   end
 
-  def to
-    parse_header
-    f = @header['to'].first
-    f ? self.class.parse_addrlist(f.value, @decode_mime_header) : []
-  end
-
-  def cc
-    parse_header
-    f = @header['cc'].first
-    f ? self.class.parse_addrlist(f.value, @decode_mime_header) : []
-  end
-
-  def bcc
-    parse_header
-    f = @header['bcc'].first
-    f ? self.class.parse_addrlist(f.value, @decode_mime_header) : []
-  end
-
-  def message_id
-    parse_header
-    f = @header['message-id'].first
-    f && MessageId.parse(f.value)
-  end
-
-  def in_reply_to
-    parse_header
-    f = @header['in-reply-to'].first
-    f ? MessageId.parse_list(f.value) : []
-  end
-
-  def references
-    parse_header
-    f = @header['references'].first
-    f ? MessageId.parse_list(f.value) : []
+  [:reply_to, :to, :cc, :bcc].each do |m|
+    n = m.to_s.gsub(/_/, '-')
+    define_method m do
+      f = field[n].first
+      f && f.parse(@decode_mime_header) || []
+    end
   end
 
   def comments
-    parse_header
-    @header['comments'].to_a.map do |f|
-      s = f.value.gsub(/\r?\n/, '')
-      @decode_mime_header ? InternetMessage.decode_mime_header_str(s) : s
-    end
+    field['comments'].map{|f| f.parse(@decode_mime_header)}
   end
 
   def keywords
+    field['keywords'].map{|f| f.parse(@decode_mime_header)}.flatten
+  end
+
+  def trace_blocks
     parse_header
-    keys = []
-    @header['keywords'].to_a.map do |f|
-      tokens = Tokenizer.new(f.value).tokenize2
-      while true
-        i = tokens.index(Token.new(:CHAR, ','))
-        break unless i
-        if i > 0
-          key = @decode_mime_header ? InternetMessage.decode_mime_header_words(tokens[0, i]) : tokens[0, i].join(' ')
-          keys.push key
-        end
-        tokens.shift i+1
-      end
-      unless tokens.empty?
-        key = @decode_mime_header ? InternetMessage.decode_mime_header_words(tokens) : tokens.join(' ')
-        keys.push key
-      end
-    end
-    keys
+    @trace_blocks
   end
 
   [:resent_date, :resent_from, :resent_sender, :resent_message_id, :return_path].each do |m|
     define_method m do
-      parse_header
-      trace = @trace_blocks.first
+      trace = trace_blocks.first
       trace && trace.method(m).call
     end
   end
 
   [:resent_to, :resent_cc, :resent_bcc, :received].each do |m|
     define_method m do
-      parse_header
-      trace = @trace_blocks.first
+      trace = trace_blocks.first
       trace ? trace.method(m).call : []
     end
-  end
-
-  def mime_version
-    parse_header
-    f = @header['mime-version'].first
-    return unless f
-    tokens = Tokenizer.new(f.value).tokenize2
-    tokens.empty? ? nil : tokens.join
-  end
-
-  def content_transfer_encoding
-    parse_header
-    f = @header['content-transfer-encoding'].first
-    return unless f
-    tokens = Tokenizer.new(f.value).tokenize2
-    tokens.empty? ? nil : tokens.join
-  end
-
-  def content_id
-    parse_header
-    f = @header['content-id'].first
-    f && MessageId.parse(f.value)
-  end
-
-  def subject
-    parse_header
-    f = @header['subject'].first
-    return unless f
-    s = f.value.gsub(/\r?\n/, '')
-    @decode_mime_header ? InternetMessage.decode_mime_header_str(s) : s
-  end
-
-  def content_type
-    parse_header
-    f = @header['content-type'].first
-    f && ContentType.parse(f.value)
-  end
-
-  def content_description
-    parse_header
-    f = @header['content-description'].first
-    return unless f
-    s = f.value.gsub(/\r?\n/, '')
-    @decode_mime_header ? InternetMessage.decode_mime_header_str(s) : s
-  end
-
-  def content_disposition
-    parse_header
-    f = @header['content-disposition'].first
-    f && ContentDisposition.parse(f.value)
   end
 
   def type
@@ -232,29 +145,6 @@ class InternetMessage
 
   def message
     type == 'message' ? InternetMessage.new(@rawbody, @opt) : nil
-  end
-
-  def self.parse_addrlist(str, decode_mime_header=nil)
-    ret = []
-    tokens = Tokenizer.new(str).tokenize2
-    until tokens.empty?
-      i = tokens.index(Token.new(:CHAR, ','))
-      if i == 0
-        tokens.shift
-        next
-      end
-      j = tokens.index(Token.new(:CHAR, ':'))
-      if i && j && j < i || !i && j
-        i = tokens.index(Token.new(:CHAR, ';')) || -1
-        ret.push Group.parse(tokens.slice!(0..i), decode_mime_header)
-      elsif i
-        ret.push Mailbox.parse(tokens.slice!(0..i-1), decode_mime_header)
-      else
-        ret.push Mailbox.parse(tokens, decode_mime_header)
-        tokens.clear
-      end
-    end
-    ret
   end
 
   def self.decode_mime_header_str(str)
@@ -309,7 +199,7 @@ class InternetMessage
         field_value = line.rest
         field = HeaderField.new(field_name, field_value, line)
         @fields.push field
-        @header[field_name].push field
+        @field[field_name].push field
         @trace_blocks.push field
       end
       @rawheader.skip(/\r?\n/)
@@ -387,59 +277,46 @@ class InternetMessage
   class TraceBlock < Array
     def resent_date
       f = self.find{|f| f.name == 'resent-date'}
-      f && DateTime.parse(f.value.gsub(/\r?\n/, '')) rescue nil
+      f && f.parse
     end
 
     def resent_from
       f = self.find{|f| f.name == 'resent-from'}
-      f && Mailbox.parse(f.value, @decode_mime_header)
+      f && f.parse(@decode_mime_header).first
     end
 
     def resent_sender
       f = self.find{|f| f.name == 'resent-sender'}
-      f && Mailbox.parse(f.value, @decode_mime_header)
+      f && f.parse(@decode_mime_header)
     end
 
     def resent_to
       f = self.find{|f| f.name == 'resent-to'}
-      f ? InternetMessage.parse_addrlist(f.value, @decode_mime_header) : []
+      f ? f.parse(@decode_mime_header) : []
     end
 
     def resent_cc
       f = self.find{|f| f.name == 'resent-cc'}
-      f ? InternetMessage.parse_addrlist(f.value, @decode_mime_header) : []
+      f ? f.parse(@decode_mime_header) : []
     end
 
     def resent_bcc
       f = self.find{|f| f.name == 'resent-bcc'}
-      f ? InternetMessage.parse_addrlist(f.value, @decode_mime_header) : []
+      f ? f.parse(@decode_mime_header) : []
     end
 
     def resent_message_id
       f = self.find{|f| f.name == 'resent-message-id'}
-      f && MessageId.parse(f.value)
+      f && f.parse
     end
 
     def return_path
       f = self.find{|f| f.name == 'return-path'}
-      return unless f
-      tokens = Tokenizer.new(f.value).tokenize2
-      i = tokens.index(Token.new(:CHAR, '<'))
-      return unless i
-      tokens.shift i+1
-      i = tokens.index(Token.new(:CHAR, '>'))
-      return unless i
-      tokens = tokens[0, i]
-      i = tokens.rindex(Token.new(:CHAR, '@'))
-      if i
-        Address.new(tokens[0, i].join, tokens[i+1..-1].join)
-      else
-        nil
-      end
+      f && f.parse
     end
 
     def received
-      self.select{|f| f.name == 'received'}.map{|f| Received.parse f.value}.compact
+      self.select{|f| f.name == 'received'}.map{|f| f.parse}.compact
     end
   end
 end
