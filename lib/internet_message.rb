@@ -21,12 +21,18 @@ class InternetMessage
     @parts = []
     @rawheader = @rawbody = nil
     @decode_mime_header = opt[:decode_mime_header]
+    @fields = []
   end
 
   def close
     if @src.data.respond_to? :unmap
       @src.data.unmap
     end
+  end
+
+  def fields
+    parse_header
+    @fields
   end
 
   def date
@@ -302,6 +308,7 @@ class InternetMessage
         field_name = line.matched(1).to_s.downcase
         field_value = line.rest
         field = HeaderField.new(field_name, field_value, line)
+        @fields.push field
         @header[field_name].push field
         @trace_blocks.push field
       end

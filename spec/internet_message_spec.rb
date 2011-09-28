@@ -39,6 +39,39 @@ Content-Disposition: inline; filename="hoge.txt"
 
 body test
 EOS
+    it '#fields is Array of HeaderFields' do
+      subject.fields.map(&:name).should == [
+        'return-path',
+        'received',
+        'received',
+        'resent-date',
+        'resent-from',
+        'resent-sender',
+        'resent-to',
+        'resent-cc',
+        'resent-bcc',
+        'resent-message-id',
+        'from',
+        'sender',
+        'reply-to',
+        'to',
+        'cc',
+        'bcc',
+        'subject',
+        'content-type',
+        'date',
+        'message-id',
+        'in-reply-to',
+        'references',
+        'comments',
+        'keywords',
+        'mime-version',
+        'content-transfer-encoding',
+        'content-id',
+        'content-description',
+        'content-disposition',
+      ]
+    end
     it '#date returns DateTime' do
       subject.date.should == DateTime.new(2011, 9, 4, 23, 14, 45, '+0900')
     end
