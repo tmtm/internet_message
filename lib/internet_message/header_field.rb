@@ -2,14 +2,20 @@ class InternetMessage
   class HeaderField
     attr_reader :name, :orig_value, :raw
 
+    # @param [String] name field name
+    # @param [MmapScanner] value field value
+    # @param [MmapScanner] raw field line
     def initialize(name, value, raw)
       @name, @orig_value, @raw = name, value, raw
     end
 
+    # @return [String] value as String
     def value
       @orig_value.to_s
     end
 
+    # @param [true, false] decode_mime_header Set true to decode MIME header (RFC2047).
+    # @return parsed value
     def parse(decode_mime_header=nil)
       case @name
       when 'date', 'resent-date'
@@ -43,6 +49,7 @@ class InternetMessage
       end
     end
 
+    # @private
     def self.parse_mailboxlist(str, decode_mime_header=nil)
       ret = []
       tokens = Tokenizer.new(str).tokenize2
@@ -62,6 +69,7 @@ class InternetMessage
       ret
     end
 
+    # @private
     def self.parse_addrlist(str, decode_mime_header=nil)
       ret = []
       tokens = Tokenizer.new(str).tokenize2
@@ -85,6 +93,7 @@ class InternetMessage
       ret
     end
 
+    # @private
     def self.parse_keywords(str, decode_mime_header=nil)
       keys = []
       tokens = Tokenizer.new(str).tokenize2
@@ -104,6 +113,7 @@ class InternetMessage
       keys
     end
 
+    # @private
     def self.parse_return_path(str)
       tokens = Tokenizer.new(str).tokenize2
       i = tokens.index(Token.new(:CHAR, '<'))

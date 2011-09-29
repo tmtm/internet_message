@@ -6,6 +6,8 @@ class InternetMessage
 
     TOKEN_RE = /[0-9a-zA-Z\!\#\$\%\&\'\*\+\-\.\^\_\`\{\|\}\~]+/i
 
+    # @param [String, Array of Tokenizer] src
+    # @return [ContentType]
     def self.parse(src)
       tokens = src.is_a?(String) ? Tokenizer.new(src, :token_re=>TOKEN_RE).tokenize : src.dup
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
@@ -19,10 +21,16 @@ class InternetMessage
 
     attr_reader :type, :subtype, :attribute
 
+    # @param [String] type
+    # @param [String] subtype
+    # @param [Hash] attribute
     def initialize(type, subtype, attribute={})
       @type, @subtype, @attribute = type.downcase, subtype.downcase, attribute
     end
 
+    # Compare self and other
+    # @param [ContentType] other
+    # @return [true, false]
     def ==(other)
       other.is_a?(ContentType) && other.type == self.type && other.subtype == self.subtype && other.attribute == self.attribute
     end

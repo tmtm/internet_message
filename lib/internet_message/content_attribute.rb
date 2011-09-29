@@ -1,4 +1,5 @@
 class InternetMessage
+  # @private
   module ContentAttribute
     def self.parse_attribute(tokens)
       attr = {}

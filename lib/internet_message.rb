@@ -12,6 +12,9 @@ class InternetMessage
   require "#{dir}/internet_message/content_type"
   require "#{dir}/internet_message/content_disposition"
 
+  # @param [File, MmapScanner, String] src message source
+  # @param [Hash] opt option
+  # @option opt [boolean] :decode_mime_header(nil) to decode RFC2047 mime header
   def initialize(src, opt={})
     @src = MmapScanner.new(src)
     @opt = opt
@@ -24,98 +27,209 @@ class InternetMessage
     @field = Hash.new{|h,k| h[k] = []}
   end
 
+  # To close object. After close, don't use this object.
   def close
     if @src.data.respond_to? :unmap
       @src.data.unmap
     end
   end
 
+  # @return [Array of HeaderField] Header fields
   def fields
     parse_header
     @fields
   end
 
+  # @return [Hash] 'field-name' => [HeaderField, ...]
   def field
     parse_header
     @field
   end
 
-  [:date, :message_id, :mime_version, :content_transfer_encoding, :content_id, :content_type, :content_disposition].each do |m|
-    n = m.to_s.gsub(/_/, '-')
-    define_method m do
-      f = field[n].first
+  defm = proc do |mname|
+    fname = mname.to_s.gsub(/_/, '-')
+    define_method mname do
+      f = field[fname].first
       f && f.parse
     end
   end
 
+  # @method date
+  # @return [DateTime] Date field
+  defm.call :date
+
+  # @method message_id
+  # @return [MessageId] Message-Id field
+  defm.call :message_id
+
+  # @method mime_version
+  # @return [String] Mime-Version field
+  defm.call :mime_version
+
+  # @method content_transfer_encoding
+  # @return [String] Content-Transfer-Encoding field
+  defm.call :content_transfer_encoding
+
+  # @method content_id
+  # @return [MessageId] Content-Id field
+  defm.call :content_id
+
+  # @method content_type
+  # @return [ContentType] Content-Type field
+  defm.call :content_type
+
+  # @method content_disposition
+  # @return [ContentDisposition] Content-Dispositoin field
+  defm.call :content_disposition
+
+  # @return [Mailbox] From field
   def from
     f = field['from'].first
     f && f.parse(@decode_mime_header).first
   end
 
-  [:sender, :subject, :content_description].each do |m|
-    n = m.to_s.gsub(/_/, '-')
-    define_method m do
-      f = field[n].first
+  defm = proc do |mname|
+    fname = mname.to_s.gsub(/_/, '-')
+    define_method mname do
+      f = field[fname].first
       f && f.parse(@decode_mime_header)
     end
   end
 
-  [:in_reply_to, :references].each do |m|
-    n = m.to_s.gsub(/_/, '-')
-    define_method m do
-      f = field[n].first
+  # @method sender
+  # @return [Mailbox] Sender field
+  defm.call :sender
+
+  # @method subject
+  # @return [String] Subject field
+  defm.call :subject
+
+  # @method content_description
+  # @return [String] Content-Description field
+  defm.call :content_description
+
+  defm = proc do |mname|
+    fname = mname.to_s.gsub(/_/, '-')
+    define_method mname do
+      f = field[fname].first
       f && f.parse || []
     end
   end
 
-  [:reply_to, :to, :cc, :bcc].each do |m|
-    n = m.to_s.gsub(/_/, '-')
-    define_method m do
-      f = field[n].first
+  # @method in_reply_to
+  # @return [Array of MessageId] In-Reply-To field
+  defm.call :in_reply_to
+
+  # @method references
+  # @return [Array of MessageId] References field
+  defm.call :references
+
+  defm = proc do |mname|
+    fname = mname.to_s.gsub(/_/, '-')
+    define_method mname do
+      f = field[fname].first
       f && f.parse(@decode_mime_header) || []
     end
   end
 
+  # @method reply_to
+  # @return [Array of Mailbox/Group] Reply-To field
+  defm.call :reply_to
+
+  # @method to
+  # @return [Array of Mailbox/Group] To field
+  defm.call :to
+
+  # @method cc
+  # @return [Array of Mailbox/Group] Cc field
+  defm.call :cc
+
+  # @method bcc
+  # @return [Array of Mailbox/Group] Bcc field
+  defm.call :bcc
+
+  # @return [Array of String] Comments field
   def comments
     field['comments'].map{|f| f.parse(@decode_mime_header)}
   end
 
+  # @return [Array of String] Keywords field
   def keywords
     field['keywords'].map{|f| f.parse(@decode_mime_header)}.flatten
   end
 
+  # @return [TraceBlockList] trace block list
   def trace_blocks
     parse_header
     @trace_blocks
   end
 
-  [:resent_date, :resent_from, :resent_sender, :resent_message_id, :return_path].each do |m|
-    define_method m do
+  defm = proc do |mname|
+    define_method mname do
       trace = trace_blocks.first
-      trace && trace.method(m).call
+      trace && trace.method(mname).call
     end
   end
 
-  [:resent_to, :resent_cc, :resent_bcc, :received].each do |m|
-    define_method m do
+  # @method resent_date
+  # @return [DateTime] Resent-Date field of first trace block
+  defm.call :resent_date
+
+  # @method resent_from
+  # @return [Mailbox] Resent-From field of first trace block
+  defm.call :resent_from
+
+  # @method resent_sender
+  # @return [Mailbox] Resent-Sender field of first trace block
+  defm.call :resent_sender
+
+  # @method resent_message_id
+  # @return [MessageId] Resent-Message-Id field of first trace block
+  defm.call :resent_message_id
+
+  # @method return_path
+  # @return [Address] Return-Path field of first trace block
+  defm.call :return_path
+
+  defm = proc do |mname|
+    define_method mname do
       trace = trace_blocks.first
-      trace ? trace.method(m).call : []
+      trace ? trace.method(mname).call : []
     end
   end
 
+  # @method resent_to
+  # @return [Array of Mailbox/Group] Resent-To field of first trace block
+  defm.call :resent_to
+
+  # @method resent_cc
+  # @return [Array of Mailbox/Group] Resent-Cc field of first trace block
+  defm.call :resent_cc
+
+  # @method resent_bcc
+  # @return [Array of Mailbox/Group] Resent-Bcc field of first trace block
+  defm.call :resent_bcc
+
+  # @method received
+  # @return [Received] Received field of first trace block
+  defm.call :received
+
+  # @return [String] media type. 'text' if Content-Type field doesn't exists.
   def type
     content_type ? content_type.type : 'text'
   end
 
+  # @return [String] media subtype. 'plain' if Content-Type field doesn't exists.
   def subtype
     content_type ? content_type.subtype : 'plain'
   end
 
+  # @return [String] charset attribute. 'us-ascii' if Content-Type field doesn't exists.
   def charset
     (content_type && content_type.attribute['charset']) || 'us-ascii'
   end
 
+  # @return [String] body text.
   def body
     parse_header
     s = @rawbody.to_s
@@ -128,29 +242,35 @@ class InternetMessage
     s.force_encoding(charset) rescue s
   end
 
+  # @return [String] preamble of multiple part message. nil if single part message.
   def preamble
     parse_multipart
     @preamble
   end
 
+  # @return [String] epilogue of multiple part message. nil if single part message.
   def epilogue
     parse_multipart
     @epilogue
   end
 
+  # @return [Array of InternetMessage] parts of multiple part message. empty if single part message.
   def parts
     parse_multipart
     @parts
   end
 
+  # @return [InternetMessage] message if Content-Type is 'message/*'.
   def message
     type == 'message' ? InternetMessage.new(@rawbody, @opt) : nil
   end
 
+  # @private
   def self.decode_mime_header_str(str)
     decode_mime_header_words(str.split(/([ \t\r\n]+)/, -1))
   end
 
+  # @private
   def self.decode_mime_header_words(words)
     ret = ''
     after_mime = nil
@@ -183,12 +303,14 @@ class InternetMessage
 
   private
 
+  # @private
   def split_header_body
     @rawheader = @src.scan_until(/(?=^\r?\n)|\z/)
     @src.skip(/\r?\n/)    # skip delimiter
     @rawbody = @src.rest
   end
 
+  # @private
   def parse_header
     return if @parsed
     split_header_body
@@ -208,6 +330,7 @@ class InternetMessage
     @parsed = true
   end
 
+  # @private
   def parse_multipart
     return if @parse_multipart
     return unless content_type
@@ -232,12 +355,14 @@ class InternetMessage
 
     attr_reader :blocks
 
+    # @private
     def initialize
       @block = TraceBlock.new
       @blocks = [@block]
       @state = nil
     end
 
+    # @private
     def push(field)
       case field.name
       when 'return-path'
@@ -262,6 +387,7 @@ class InternetMessage
       end
     end
 
+    # @private
     def clean
       @blocks.delete_if(&:empty?)
     end
@@ -275,46 +401,55 @@ class InternetMessage
   end
 
   class TraceBlock < Array
+    # @return [DateTime] Resent-Date field in trace block
     def resent_date
       f = self.find{|f| f.name == 'resent-date'}
       f && f.parse
     end
 
+    # @return [Mailbox] Resent-From field in trace block
     def resent_from
       f = self.find{|f| f.name == 'resent-from'}
       f && f.parse(@decode_mime_header).first
     end
 
+    # @return [Mailbox] Resent-Sender field in trace block
     def resent_sender
       f = self.find{|f| f.name == 'resent-sender'}
       f && f.parse(@decode_mime_header)
     end
 
+    # @return [Array of Mailbox/Group] Resent-To field in trace block
     def resent_to
       f = self.find{|f| f.name == 'resent-to'}
       f ? f.parse(@decode_mime_header) : []
     end
 
+    # @return [Array of Mailbox/Group] Resent-Cc field in trace block
     def resent_cc
       f = self.find{|f| f.name == 'resent-cc'}
       f ? f.parse(@decode_mime_header) : []
     end
 
+    # @return [Array of Mailbox/Group] Resent-Bcc field in trace block
     def resent_bcc
       f = self.find{|f| f.name == 'resent-bcc'}
       f ? f.parse(@decode_mime_header) : []
     end
 
+    # @return [MessageId] Resent-Message-Id field in trace block
     def resent_message_id
       f = self.find{|f| f.name == 'resent-message-id'}
       f && f.parse
     end
 
+    # @return [Address] Return-Path field in trace block
     def return_path
       f = self.find{|f| f.name == 'return-path'}
       f && f.parse
     end
 
+    # @return [Array of Received] Received fields in trace block
     def received
       self.select{|f| f.name == 'received'}.map{|f| f.parse}.compact
     end

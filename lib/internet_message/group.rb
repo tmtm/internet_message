@@ -2,6 +2,9 @@ require "#{File.dirname __FILE__}/tokenizer"
 
 class InternetMessage
   class Group
+    # @param [String, Array of Tokenizer] src
+    # @param [true, false] decode_mime_header Set true to decode MIME header (RFC2047).
+    # @return [Group]
     def self.parse(src, decode_mime_header=nil)
       tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
@@ -19,10 +22,13 @@ class InternetMessage
 
     attr_reader :mailbox_list, :display_name
 
+    # @param [String] display_name
+    # @param [Array of Mailbox] mailbox_list
     def initialize(display_name, mailbox_list)
       @display_name, @mailbox_list = display_name, mailbox_list
     end
 
+    # @private
     def to_s
       d = @display_name.split(/[ \t]+/).map do |w|
         if w =~ /\A[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+\z/n

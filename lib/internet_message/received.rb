@@ -3,6 +3,8 @@ require "#{File.dirname __FILE__}/tokenizer"
 
 class InternetMessage
   class Received
+    # @param [String, Array of Tokenizer] src
+    # @return [Received]
     def self.parse(src)
       tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
       i = tokens.index(Token.new(:CHAR, ';'))
@@ -41,6 +43,13 @@ class InternetMessage
 
     attr_reader :from, :by, :via, :with, :id, :for, :date
 
+    # @param [String] from
+    # @param [String] by
+    # @param [String] via
+    # @param [String] with
+    # @param [String] id
+    # @param [Mailbox] for_
+    # @param [DateTime] date
     def initialize(from, by, via, with, id, for_, date)
       @from, @by, @via, @with, @id, @for, @date =
         from, by, via, with, id, for_, date

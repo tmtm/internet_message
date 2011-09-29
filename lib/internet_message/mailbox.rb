@@ -3,6 +3,9 @@ require "#{File.dirname __FILE__}/address"
 
 class InternetMessage
   class Mailbox
+    # @param [String, Array of Tokenizer] src
+    # @param [true, false] decode_mime_header Set true to decode MIME header (RFC2047).
+    # @return [Mailbox]
     def self.parse(src, decode_mime_header=nil)
       tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}
@@ -21,6 +24,9 @@ class InternetMessage
       Mailbox.new(Address.new(local, domain), display_name)
     end
 
+    # @param [String, Array of Tokenizer] src
+    # @param [true, false] decode_mime_header Set true to decode MIME header (RFC2047).
+    # @return [Array of Mailbox]
     def self.parse_list(src, decode_mime_header=nil)
       tokens = src.is_a?(String) ? Tokenizer.new(src).tokenize : src.dup
       ret = []
@@ -38,6 +44,13 @@ class InternetMessage
 
     attr_reader :address, :display_name
 
+    # @overload initialize(addr, display_name=nil)
+    #   @param [Address] addr
+    #   @param [String] display_name
+    # @overload initialize(local_part, domain, display_name=nil)
+    #   @param [String] local_part
+    #   @param [String] domain
+    #   @param [String] display_name
     def initialize(addr, *args)
       if addr.is_a? Address and args.size <= 1
         @address = addr
@@ -50,14 +63,17 @@ class InternetMessage
       end
     end
 
+    # @return [String] local_part
     def local_part
       @address.local_part
     end
 
+    # @return [String] domain
     def domain
       @address.domain
     end
 
+    # @private
     def to_s
       if @display_name
         d = @display_name.split(/[ \t]+/).map do |w|
