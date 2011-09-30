@@ -9,6 +9,6 @@ Gem::Specification.new do |spec|
   spec.summary = 'Internet Message (RFC5322) parser'
   spec.description = 'InternetMessage is a parser for Internet Message (RFC5322)'
   spec.test_files = Dir.glob('spec/*_spec.rb')
-  spec.version = '0.0.1'
+  spec.version = '0.1'
   spec.add_dependency 'mmapscanner'
 end
