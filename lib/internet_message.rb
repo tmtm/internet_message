@@ -315,7 +315,7 @@ class InternetMessage
     return if @parsed
     split_header_body
     @trace_blocks = TraceBlockList.new
-    while line = @rawheader.scan(/.*(\r?\n[ \t].*)*(?=\r?\n|\z)/n)
+    while line = @rawheader.scan(/.+(\r?\n[ \t].*)*(?=\r?\n|\z)/n)
       if line.skip(/(.*?):[ \t]*/)
         field_name = line.matched(1).to_s.downcase
         field_value = line.rest
