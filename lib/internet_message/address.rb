@@ -11,7 +11,7 @@ class InternetMessage
 
     # @return [String] mail address
     def to_s
-      if @local_part =~ /\A[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+(\.[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+)*\z/n
+      if @local_part =~ /\A[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+(\.[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+)*\z/
         l = @local_part
       else
         l = quote_string(@local_part)

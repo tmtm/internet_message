@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require __FILE__.sub(/\/spec\//, '/lib/').sub(/_spec\.rb\z/,'')
 
 describe InternetMessage::Address do
@@ -24,6 +25,14 @@ describe InternetMessage::Address do
         subject.to_s.should == '"hoge..fuga"@example.com'
       end
     end
+
+    context 'localpart including UTF-8 character' do
+      let(:local_part){'あいう'}
+      it 'quote localpart' do
+        subject.to_s.should == '"あいう"@example.com'
+      end
+    end
+
   end
 
   describe '#==' do
