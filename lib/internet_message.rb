@@ -403,55 +403,55 @@ class InternetMessage
   class TraceBlock < Array
     # @return [DateTime] Resent-Date field in trace block
     def resent_date
-      f = self.find{|f| f.name == 'resent-date'}
+      f = self.find{|_| _.name == 'resent-date'}
       f && f.parse
     end
 
     # @return [Mailbox] Resent-From field in trace block
     def resent_from
-      f = self.find{|f| f.name == 'resent-from'}
+      f = self.find{|_| _.name == 'resent-from'}
       f && f.parse(@decode_mime_header).first
     end
 
     # @return [Mailbox] Resent-Sender field in trace block
     def resent_sender
-      f = self.find{|f| f.name == 'resent-sender'}
+      f = self.find{|_| _.name == 'resent-sender'}
       f && f.parse(@decode_mime_header)
     end
 
     # @return [Array of Mailbox/Group] Resent-To field in trace block
     def resent_to
-      f = self.find{|f| f.name == 'resent-to'}
+      f = self.find{|_| _.name == 'resent-to'}
       f ? f.parse(@decode_mime_header) : []
     end
 
     # @return [Array of Mailbox/Group] Resent-Cc field in trace block
     def resent_cc
-      f = self.find{|f| f.name == 'resent-cc'}
+      f = self.find{|_| _.name == 'resent-cc'}
       f ? f.parse(@decode_mime_header) : []
     end
 
     # @return [Array of Mailbox/Group] Resent-Bcc field in trace block
     def resent_bcc
-      f = self.find{|f| f.name == 'resent-bcc'}
+      f = self.find{|_| _.name == 'resent-bcc'}
       f ? f.parse(@decode_mime_header) : []
     end
 
     # @return [MessageId] Resent-Message-Id field in trace block
     def resent_message_id
-      f = self.find{|f| f.name == 'resent-message-id'}
+      f = self.find{|_| _.name == 'resent-message-id'}
       f && f.parse
     end
 
     # @return [Address] Return-Path field in trace block
     def return_path
-      f = self.find{|f| f.name == 'return-path'}
+      f = self.find{|_| _.name == 'return-path'}
       f && f.parse
     end
 
     # @return [Array of Received] Received fields in trace block
     def received
-      self.select{|f| f.name == 'received'}.map{|f| f.parse}.compact
+      self.select{|_| _.name == 'received'}.map{|_| _.parse}.compact
     end
   end
 end
