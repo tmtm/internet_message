@@ -22,7 +22,7 @@ class InternetMessage
         DateTime.parse(value.gsub(/\r?\n/, '')) rescue nil
       when 'from', 'resent-from'
         self.class.parse_mailboxlist(value, decode_mime_header)
-      when 'from', 'sender', 'resent-from', 'resent-sender'
+      when 'sender', 'resent-sender'
         Mailbox.parse(value, decode_mime_header)
       when 'message-id', 'content-id', 'resent-message-id'
         MessageId.parse(value)
