@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require __FILE__.sub(/\/spec\//, '/lib/').sub(/_spec\.rb\z/,'')
 
 describe InternetMessage::Mailbox do
@@ -106,20 +107,6 @@ describe InternetMessage::Mailbox do
       end
     end
 
-    context 'localpart including special character' do
-      let(:local_part){'hoge"fuga\\foo'}
-      it 'quote localpart' do
-        subject.to_s.should == '"hoge\\"fuga\\\\foo"@example.com'
-      end
-    end
-
-    context 'localpart including ".."' do
-      let(:local_part){'hoge..fuga'}
-      it 'quote localpart' do
-        subject.to_s.should == '"hoge..fuga"@example.com'
-      end
-    end
-
     context 'with simple display_name' do
       let(:display_name){'hoge fuga'}
       it 'returns with display_name' do
@@ -133,6 +120,19 @@ describe InternetMessage::Mailbox do
         subject.to_s.should == '"hoge.fuga,foo" <hoge@example.com>'
       end
     end
+
+    context 'with display_name including UTF-8 character' do
+      let(:display_name){'あいう'}
+      it 'is MIME encoded' do
+        subject.to_s.should == '=?UTF-8?B?44GC44GE44GG?= <hoge@example.com>'
+      end
+    end
+
+    context 'with display_name including ISO-2022-JP character' do
+      let(:display_name){'あいう'.encode('ISO-2022-JP')}
+      it 'is MIME encoded' do
+        subject.to_s.should == '=?ISO-2022-JP?B?GyRCJCIkJCQmGyhC?= <hoge@example.com>'
+      end
+    end
   end
 end
-

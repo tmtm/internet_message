@@ -76,13 +76,17 @@ class InternetMessage
     # @private
     def to_s
       if @display_name
-        d = @display_name.split(/[ \t]+/).map do |w|
-          if w =~ /\A[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+\z/n
-            w
-          else
-            quote_string w
-          end
-        end.join(' ')
+        if @display_name.dup.force_encoding('ASCII-8BIT') !~ /\A[\x20-\x7E]*\z/
+          d = mime_header_b64_encode(@display_name)
+        else
+          d = @display_name.split(/[ \t]+/).map do |w|
+            if w =~ /\A[0-9a-zA-Z\!\#\$\%\'\*\+\-\/\=\?\^\_\`\{\|\}\~]+\z/n
+              w
+            else
+              quote_string w
+            end
+          end.join(' ')
+        end
         "#{d} <#{@address.to_s}>"
       else
         @address.to_s
@@ -97,6 +101,12 @@ class InternetMessage
 
     def ==(other)
       other.is_a?(Mailbox) && other.address == self.address && other.display_name == self.display_name
+    end
+
+    def mime_header_b64_encode(str)
+      enc = str.encoding.name
+      data = Base64.encode64(str).gsub(/\s/, '')
+      "=?#{enc}?B?#{data}?="
     end
   end
 end
