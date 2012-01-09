@@ -34,6 +34,25 @@ class InternetMessage
     end
   end
 
+  # @return [MmapScanner] source message
+  def raw
+    parse_header
+    @src.pos = 0
+    @src
+  end
+
+  # @return [MmapScanner] message header
+  def rawheader
+    parse_header
+    @rawheader
+  end
+
+  # @return [MmapScanner] message body
+  def rawbody
+    parse_header
+    @rawbody
+  end
+
   # @return [Array of HeaderField] Header fields
   def fields
     parse_header

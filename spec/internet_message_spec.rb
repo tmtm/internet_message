@@ -203,6 +203,18 @@ EOS
     it '#message returns nil' do
       subject.message.should == nil
     end
+    it '#raw returns message source as MmapScanner' do
+      subject.raw.class.should == MmapScanner
+      subject.raw.to_s.should == src
+    end
+    it '#rawheader returns message header as MmapScanner' do
+      subject.rawheader.class.should == MmapScanner
+      subject.rawheader.to_s.should == src.split(/^\n/, 2).first
+    end
+    it '#rawbody returns message body as MmapScanner' do
+      subject.rawbody.class.should == MmapScanner
+      subject.rawbody.to_s.should == src.split(/^\n/, 2).last
+    end
   end
 
   context 'with empty field value' do
