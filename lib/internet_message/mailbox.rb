@@ -93,14 +93,14 @@ class InternetMessage
       end
     end
 
+    def ==(other)
+      other.is_a?(Mailbox) && other.address == self.address && other.display_name == self.display_name
+    end
+
     private
 
     def quote_string(s)
       '"'+s.gsub(/[\\\"]/){"\\#{$&}"}+'"'
-    end
-
-    def ==(other)
-      other.is_a?(Mailbox) && other.address == self.address && other.display_name == self.display_name
     end
 
     def mime_header_b64_encode(str)

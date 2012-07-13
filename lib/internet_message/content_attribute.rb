@@ -14,7 +14,7 @@ class InternetMessage
       char_lang = {}
       attr.each do |key, value|
         case key
-        when /^([^\*]+)(\*0)?\*$/no
+        when /\A([^\*]+)(\*0)?\*\z/no
           name, ord = $1, $2
           char, lang, v = value.split(/\'/, 3)
           char_lang[name] = [char, lang]
@@ -27,11 +27,11 @@ class InternetMessage
           else
             newattr[name] = v
           end
-        when /^([^\*]+)\*([1-9]\d*)\*$/no
+        when /\A([^\*]+)\*([1-9]\d*)\*\z/no
           name, ord = $1, $2.to_i
           v = value.gsub(/%([0-9A-F][0-9A-F])/ni){$1.hex.chr}
           h[name] << [ord, v]
-        when /^([^\*]+)\*([0-9]\d*)$/no
+        when /\A([^\*]+)\*([0-9]\d*)\z/no
           name, ord = $1, $2.to_i
           h[name] << [ord, value]
         else

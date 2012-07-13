@@ -28,6 +28,12 @@ describe InternetMessage::Group do
       its(:mailbox_list){should be_empty}
     end
 
+    context "for 'hoge@example.com'" do
+      let(:src){'hoge@example.com'}
+      its(:display_name){should == ''}
+      its(:mailbox_list){should == [InternetMessage::Mailbox.new('hoge','example.com')]}
+    end
+
     context "for ':;'" do
       let(:src){':;'}
       its(:display_name){should == ''}

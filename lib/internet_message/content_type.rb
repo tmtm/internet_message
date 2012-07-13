@@ -8,6 +8,7 @@ class InternetMessage
 
     # @param [String, Array of Tokenizer] src
     # @return [ContentType]
+    # @return [nil] if src is invalid
     def self.parse(src)
       tokens = src.is_a?(String) ? Tokenizer.new(src, :token_re=>TOKEN_RE).tokenize : src.dup
       tokens.delete_if{|t| t.type == :WSP or t.type == :COMMENT}

@@ -55,5 +55,12 @@ class InternetMessage
         from, by, via, with, id, for_, date
     end
 
+    # @param [Received] other
+    # @return [true, false]
+    def ==(other)
+      other.is_a?(Received) && other.from == self.from && other.by == self.by && other.via == self.via &&
+        other.with == self.with && other.id == self.id && other.for == self.for && other.date == self.date
+    end
+
   end
 end

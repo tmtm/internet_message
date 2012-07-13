@@ -335,12 +335,9 @@ class InternetMessage
     split_header_body
     @trace_blocks = TraceBlockList.new
     while line = @rawheader.scan(/.+(\r?\n[ \t].*)*(?=\r?\n|\z)/n)
-      if line.skip(/(.*?):[ \t]*/)
-        field_name = line.matched(1).to_s.downcase
-        field_value = line.rest
-        field = HeaderField.new(field_name, field_value, line)
+      if field = HeaderField.parse(line)
         @fields.push field
-        @field[field_name].push field
+        @field[field.name].push field
         @trace_blocks.push field
       end
       @rawheader.skip(/\r?\n/)

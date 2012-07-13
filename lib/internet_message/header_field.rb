@@ -1,5 +1,24 @@
+require "#{File.dirname __FILE__}"
+require "#{File.dirname __FILE__}/tokenizer"
+require "#{File.dirname __FILE__}/mailbox"
+require "#{File.dirname __FILE__}/message_id"
+require "#{File.dirname __FILE__}/content_type"
+require "#{File.dirname __FILE__}/content_disposition"
+require "#{File.dirname __FILE__}/group"
+require "#{File.dirname __FILE__}/received"
+
 class InternetMessage
   class HeaderField
+    # @param [MmapScanner] raw
+    # @return [InternetMessage::HeaderField]
+    # @return [nil] if raw is invalid
+    def self.parse(raw)
+      return nil unless raw.skip(/(.*?):[ \t]*/)
+      name = raw.matched(1).to_s.downcase
+      value = raw.rest
+      HeaderField.new(name, value, raw)
+    end
+
     attr_reader :name, :orig_value, :raw
 
     # @param [String] name field name

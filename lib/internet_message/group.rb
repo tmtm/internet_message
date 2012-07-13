@@ -1,4 +1,5 @@
 require "#{File.dirname __FILE__}/tokenizer"
+require "#{File.dirname __FILE__}/mailbox"
 
 class InternetMessage
   class Group
@@ -38,6 +39,12 @@ class InternetMessage
         end
       end.join(' ')
       "#{d}: "+mailbox_list.join(', ')+';'
+    end
+
+    # @param [Group] other
+    # @return [true, false]
+    def ==(other)
+      other.is_a?(Group) && other.display_name.downcase == self.display_name.downcase && other.mailbox_list == self.mailbox_list
     end
 
     private
